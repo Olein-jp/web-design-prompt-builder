@@ -500,7 +500,7 @@ function registerWebMcpTool() {
       renderPromptResult(prompt);
       elements.status.className = 'form-status success';
       elements.status.textContent = isThreePartMode()
-        ? '3つのプロンプトを生成しました。上部から順番にコピーして使用できます。'
+        ? '共通仕様書と3つの画像生成プロンプトを作成しました。STEP 1から順番に使用してください。'
         : 'プロンプトを生成しました。右側で確認・編集できます。';
 
       return {
@@ -605,7 +605,7 @@ function handleGenerate(event) {
     renderPromptResult(prompt);
     elements.status.className = 'form-status success';
     elements.status.textContent = isThreePartMode()
-      ? '3つのプロンプトを生成しました。上部から順番にコピーして使用できます。'
+      ? '共通仕様書と3つの画像生成プロンプトを作成しました。STEP 1から順番に使用してください。'
       : 'プロンプトを生成しました。右側で確認・編集できます。';
 
     if (window.matchMedia('(max-width: 980px)').matches) {
@@ -737,24 +737,25 @@ function getGenerationContext() {
 
 function buildImageMockupPrompt() {
   const context = getGenerationContext();
-  if (context.mockupScope === 'set') return buildThreePartPromptSet(context);
+  if (context.mockupScope === 'set') return buildGuidedPromptSet(context);
   return buildSingleImageMockupPrompt(context, context.mockupScope);
 }
 
-function buildThreePartPromptSet(context) {
+function buildGuidedPromptSet(context) {
   const parts = [
-    { key: 'top', title: 'PROMPT 1 / ページ上部' },
-    { key: 'middle', title: 'PROMPT 2 / ページ中部' },
-    { key: 'bottom', title: 'PROMPT 3 / ページ下部' },
+    { key: 'spec', title: 'STEP 1 / 共通デザイン仕様書' },
+    { key: 'top', title: 'STEP 2 / ページ上部' },
+    { key: 'middle', title: 'STEP 3 / ページ中部' },
+    { key: 'bottom', title: 'STEP 4 / ページ下部' },
   ];
 
-  const prompts = buildThreePartPromptParts(context);
+  const prompts = buildGuidedPromptParts(context);
 
   return [
-    '# Website UI Mockup Image Prompt Set',
+    '# Website UI Mockup Guided Prompt Set',
     '',
-    '以下の3本を、同じChatGPTチャットで上から順番に1本ずつ使用してください。',
-    '一度に3枚を生成させず、各画像を確認してから次のプロンプトへ進んでください。',
+    '以下の4本を、同じChatGPTチャットでSTEP 1から順番に1本ずつ使用してください。',
+    '最初に共通デザイン仕様書を確定し、その仕様書と先に生成した画像を基準に3分割の画像を生成してください。',
     '',
     ...parts.flatMap((part, index) => [
       `================ ${part.title} ================`,
@@ -765,12 +766,128 @@ function buildThreePartPromptSet(context) {
   ].join('\n');
 }
 
-function buildThreePartPromptParts(context = getGenerationContext()) {
+function buildGuidedPromptParts(context = getGenerationContext()) {
   return {
-    top: buildSingleImageMockupPrompt(context, 'top'),
-    middle: buildSingleImageMockupPrompt(context, 'middle'),
-    bottom: buildSingleImageMockupPrompt(context, 'bottom'),
+    spec: buildCommonDesignSpecificationPrompt(context),
+    top: buildGuidedPartImagePrompt(context, 'top'),
+    middle: buildGuidedPartImagePrompt(context, 'middle'),
+    bottom: buildGuidedPartImagePrompt(context, 'bottom'),
   };
+}
+
+function buildCommonDesignSpecificationPrompt(context) {
+  const concept = context.impressionNames.length
+    ? `「${context.impressionNames.join('・')}」を軸にする。`
+    : '業種・目的・想定ユーザーに適した視覚的な個性を判断する。';
+  const allSections = pageStructures[context.siteKey] || pageStructures.other;
+
+  return [
+    '# Common Design Specification Creation Prompt',
+    '',
+    `あなたはシニアWebデザイナーです。${context.industryName}の${context.site.label}について、これから同じチャットで生成するページ上部・中部・下部の3枚に共通して適用するデザイン仕様書を作成してください。`,
+    'この段階では画像を生成しないでください。曖昧な選択肢を残さず、以降の画像生成で変更しない具体的なルールとして確定してください。',
+    '',
+    '## Project Context',
+    `- 主な目的：${context.goal.label}。${context.goal.text}`,
+    `- 想定ユーザー：${context.audience}`,
+    `- 業種の前提：${context.industry.traits}`,
+    `- デザインコンセプト：${concept}`,
+    ...context.impressionDirections.map((direction) => `- ${direction}`),
+    ...context.adjustments.map((adjustment) => `- ${adjustment}`),
+    `- 配色の方向性：${context.color}`,
+    `- スタイル：${context.style}`,
+    `- 余白：${context.spacing}`,
+    `- 写真・ビジュアル：${context.visual}`,
+    ...(context.avoid ? [`- ユーザーが避けたい表現：${context.avoid}`] : []),
+    ...(context.request ? [`- 追加要望：${context.request}`] : []),
+    '',
+    '## Whole-page Architecture',
+    ...allSections.map((section, index) => `${index + 1}. ${section}`),
+    '',
+    '## Required Specification',
+    '次の項目を、実装判断に使える具体性で1案に確定してください。複数案は提示しないでください。',
+    '1. Design principles：このサイト固有の視覚原則を3〜5項目',
+    '2. Color tokens：Primary、Accent、Background、Surface、Text、Muted text、BorderのHEX値と使用比率・用途',
+    '3. Typography：和文・欧文の書体カテゴリ、見出し・本文・補足のサイズ階層、ウェイト、行間',
+    '4. Layout system：デスクトップ幅、コンテンツ最大幅、カラム数、ガター、左右余白、基準グリッド',
+    '5. Spacing system：セクション間、要素間、文字まわりに使う具体的な余白スケール',
+    '6. Components：ヘッダー、ナビゲーション、CTA、ボタン、カード、罫線、角丸、影の統一ルール',
+    '7. Photography：被写体、構図、光、色温度、トリミング、避ける写真表現',
+    '8. Content density：1セクションの情報量、本文行数、カード数、ナビゲーション数の上限',
+    '9. Continuity rules：上部・中部・下部で絶対に変更しない要素と、セクションごとに変化させてよい要素',
+    '10. Prohibited expressions：テンプレート感や業種との不一致を防ぐ禁止事項',
+    '',
+    '## Constraints',
+    '- 「暖色系」「モダン」「広め」などの抽象語だけで終わらせず、色・寸法・比率・用途へ具体化する。',
+    '- 根拠のない実績値、受賞歴、顧客名、人物名を仕様へ追加しない。',
+    `- ${context.industry.avoid}`,
+    '- 仕様書内で矛盾が生じる場合は、サイトの目的、業種としての適切性、可読性、ユーザー指定の順に調整する。',
+    '',
+    '## Output',
+    '見出しを「# Common Design Specification — Design Lock v1」とし、仕様書本文だけを出力してください。画像やモックアップは生成しないでください。',
+    '出力した仕様書を、このチャットで続けて行う3枚の画像生成における固定ルールとして保持してください。',
+  ].join('\n');
+}
+
+function buildGuidedPartImagePrompt(context, scopeKey) {
+  const scope = mockupScopes[scopeKey];
+  const allSections = pageStructures[context.siteKey] || pageStructures.other;
+  const scopedSections = scope.indices.map((index) => allSections[index]);
+  const priorImageRules = {
+    top: [
+      'このチャットで直前に確定した「Common Design Specification — Design Lock v1」を、視覚表現の最優先ルールとして使用する。',
+      '共通仕様書がまだ作成されていない場合は画像を生成せず、先にSTEP 1を実行するよう伝える。',
+    ],
+    middle: [
+      'このチャットで確定した共通仕様書と、直前に生成したページ上部画像の両方を参照する。',
+      '配色、文字階層、コンテンツ幅、グリッド、余白、ボタン、罫線、角丸、影、写真のトーンを変更しない。',
+      '共通仕様書または上部画像を参照できない場合は画像を生成せず、不足しているものを伝える。',
+    ],
+    bottom: [
+      'このチャットで確定した共通仕様書と、これまでに生成したページ上部・中部画像をすべて参照する。',
+      '確立済みの配色、文字階層、コンテンツ幅、グリッド、余白、ボタン、罫線、角丸、影、写真のトーンを変更しない。',
+      '共通仕様書または先行画像を参照できない場合は画像を生成せず、不足しているものを伝える。',
+    ],
+  };
+
+  return [
+    `# Website UI Mockup Image Prompt — ${scope.label}`,
+    '',
+    `Create a high-fidelity, production-ready website UI mockup for the ${scope.label} of a ${context.industryName} ${context.site.label}.`,
+    'コンセプトアートや広告ではなく、実際に公開されている同一Webサイトの連続した画面として描画してください。',
+    '',
+    '## Authoritative Sources',
+    ...priorImageRules[scopeKey].map((rule) => `- ${rule}`),
+    '- このプロンプトは表示範囲とコンテンツの役割だけを指定する。色やUIルールを新しく選び直さない。',
+    '',
+    '## Purpose and Audience',
+    `- 主な目的：${context.goal.label}。${context.goal.text}`,
+    `- 想定ユーザー：${context.audience}`,
+    '',
+    '## Canvas / Framing',
+    `- 表示範囲：${scope.label}`,
+    ...scope.framing.map((rule) => `- ${rule}`),
+    '- PC、スマートフォン、ブラウザなどのデバイス枠には入れない。',
+    '- プレゼンテーションボード、注釈、カラーパレット見本、周囲の装飾を付けない。',
+    '- 画像全体をWebサイトのUIだけで構成する。',
+    '',
+    '## Page Architecture',
+    ...scopedSections.map((section, index) => `${index + 1}. ${section}`),
+    '- 各セクションに異なる役割と構図を持たせ、同じカードレイアウトを反復しない。',
+    '',
+    '## Rendering Priorities',
+    '1. 共通仕様書と先行画像のデザインを維持する',
+    '2. 余白のリズムと読みやすい文字サイズを保つ',
+    '3. 指定範囲の情報階層とセクション構成を表現する',
+    '4. 補助的な文章や要素を収める',
+    '- キャンバスに収まらない場合は、余白や文字を縮小せず、優先度の低い文章・カードを省略する。',
+    '- 日本語の本文は1ブロック2〜3行を目安とし、意味不明な文字列やLorem ipsumを使わない。',
+    '- 根拠のない実績値、受賞歴、顧客ロゴ、評価、人物名を追加しない。',
+    '- 新しいデザイン案として作り直さず、今回指定した表示範囲だけを生成する。',
+    '',
+    '## Output',
+    `共通仕様書と参照画像を継承した「${scope.label}」のモックアップ画像を1枚、直接生成してください。条件が揃っている場合、説明やデザイン解説は不要です。`,
+  ].join('\n');
 }
 
 function buildSingleImageMockupPrompt(context, scopeKey) {
@@ -985,8 +1102,8 @@ function renderPromptResult(prompt) {
   updateResultMode();
 
   if (isThreePartMode()) {
-    const prompts = buildThreePartPromptParts();
-    const keys = ['top', 'middle', 'bottom'];
+    const prompts = buildGuidedPromptParts();
+    const keys = ['spec', 'top', 'middle', 'bottom'];
     elements.partOutputs.forEach((output, index) => {
       output.value = prompts[keys[index]];
     });

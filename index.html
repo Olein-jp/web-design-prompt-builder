@@ -13,7 +13,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2317243d'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Georgia,serif' font-size='38' fill='white'%3EW%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="assets/css/style.css?v=7" />
+    <link rel="stylesheet" href="assets/css/style.css?v=8" />
   </head>
   <body>
     <a class="skip-link" href="#builder">入力フォームへ移動</a>
@@ -325,10 +325,38 @@
           </div>
 
           <div class="split-results" id="split-results" hidden>
+            <p class="workflow-note">
+              同じChatGPTチャットで、STEP 1から順番に使用してください。最初に共通仕様書を確定すると、3枚のデザインを揃えやすくなります。
+            </p>
+
             <article class="split-result">
               <div class="split-result-heading">
                 <div>
-                  <p class="part-label">PROMPT 1</p>
+                  <p class="part-label">STEP 1 / DESIGN LOCK</p>
+                  <h3>共通デザイン仕様書用</h3>
+                </div>
+                <button type="button" class="copy-button part-copy-button" data-target="prompt-output-spec" disabled>
+                  <span class="copy-icon" aria-hidden="true"></span>
+                  <span class="part-copy-label">コピー</span>
+                </button>
+              </div>
+              <textarea
+                id="prompt-output-spec"
+                class="prompt-output part-output"
+                aria-label="共通デザイン仕様書を作成するためのプロンプト。内容を編集できます"
+                spellcheck="false"
+                placeholder="生成すると、共通デザイン仕様書用のプロンプトが表示されます。"
+              ></textarea>
+              <div class="result-footer">
+                <p class="part-character-count">0文字</p>
+                <p>最初に送信して仕様書を確定</p>
+              </div>
+            </article>
+
+            <article class="split-result">
+              <div class="split-result-heading">
+                <div>
+                  <p class="part-label">STEP 2 / TOP</p>
                   <h3>ページ上部用</h3>
                 </div>
                 <button type="button" class="copy-button part-copy-button" data-target="prompt-output-top" disabled>
@@ -345,14 +373,14 @@
               ></textarea>
               <div class="result-footer">
                 <p class="part-character-count">0文字</p>
-                <p>最初に使用</p>
+                <p>共通仕様書の確定後に使用</p>
               </div>
             </article>
 
             <article class="split-result">
               <div class="split-result-heading">
                 <div>
-                  <p class="part-label">PROMPT 2</p>
+                  <p class="part-label">STEP 3 / MIDDLE</p>
                   <h3>ページ中部用</h3>
                 </div>
                 <button type="button" class="copy-button part-copy-button" data-target="prompt-output-middle" disabled>
@@ -376,7 +404,7 @@
             <article class="split-result">
               <div class="split-result-heading">
                 <div>
-                  <p class="part-label">PROMPT 3</p>
+                  <p class="part-label">STEP 4 / BOTTOM</p>
                   <h3>ページ下部用</h3>
                 </div>
                 <button type="button" class="copy-button part-copy-button" data-target="prompt-output-bottom" disabled>
@@ -406,6 +434,6 @@
       <p>入力内容は外部へ送信されません。</p>
     </footer>
 
-    <script src="assets/js/app.js?v=7" defer></script>
+    <script src="assets/js/app.js?v=8" defer></script>
   </body>
 </html>
