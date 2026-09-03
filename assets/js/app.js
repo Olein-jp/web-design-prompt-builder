@@ -149,6 +149,11 @@ const generateLabels = {
   prototype: '実装用プロンプトを生成',
 };
 
+const productionModes = {
+  top: 'トップページ',
+  subpage: '下層ページ',
+};
+
 const mockupScopes = {
   set: {
     label: '上部・中部・下部の3分割セット',
@@ -205,6 +210,55 @@ const mockupScopes = {
     ],
     indices: [3, 4, 5],
   },
+};
+
+const subpageTypes = {
+  'service-list': {
+    label: 'サービス一覧',
+    sections: ['ページタイトルと、このページで分かること', '提供サービスの全体像と分類', '各サービスの違い・対象者・選び方', '支援体制や共通する強み', '相談前の疑問解消と主要CTA'],
+  },
+  'service-detail': {
+    label: 'サービス詳細',
+    sections: ['パンくず・ページタイトル・提供価値の要約', '対象となる課題とサービスの内容', '具体的な支援範囲・特徴・得られる価値', '利用の流れ・料金や条件の考え方', '関連情報・よくある質問・主要CTA'],
+  },
+  'case-list': {
+    label: '事例一覧',
+    sections: ['ページタイトルと事例の見方', 'カテゴリや課題別の絞り込み', '事例一覧と比較に必要な要約情報', '支援の傾向や成果の読み解き', '相談・関連サービスへの導線'],
+  },
+  'case-detail': {
+    label: '事例詳細',
+    sections: ['パンくず・事例タイトル・概要', '相談前の状況と課題', '提案・実施内容と進め方', '変化・成果・担当者の所感', '関連事例・関連サービス・主要CTA'],
+  },
+  about: {
+    label: '会社・事務所案内',
+    sections: ['ページタイトルと組織の役割', '理念・姿勢・代表メッセージ', '会社・事務所の基本情報', '沿革・体制・アクセスなどの信頼材料', '問い合わせや関連ページへの導線'],
+  },
+  staff: {
+    label: 'スタッフ紹介',
+    sections: ['ページタイトルとチームの紹介', 'スタッフ一覧と役割', '人物詳細・専門性・仕事への姿勢', 'チームとしての支援体制', '相談・採用など次の行動への導線'],
+  },
+  recruitment: {
+    label: '採用情報',
+    sections: ['ページタイトルと募集メッセージ', '仕事・役割・組織文化', '働く環境・成長・制度', '募集要項・選考の流れ', '応募前の疑問解消と応募CTA'],
+  },
+  faq: {
+    label: 'よくある質問',
+    sections: ['ページタイトルと案内', '質問カテゴリまたは目次', '重要な質問と回答', '相談前に確認したい補足情報', '解決しない場合の問い合わせ導線'],
+  },
+  contact: {
+    label: 'お問い合わせ',
+    sections: ['ページタイトルと問い合わせ前の案内', '問い合わせ方法・対応範囲・目安', '入力フォームと必要項目', '個人情報・送信前確認・補足事項', '送信CTAと代替連絡手段'],
+  },
+  other: {
+    label: 'その他の下層ページ',
+    sections: ['パンくずとページタイトル', 'このページで伝える中心情報', '理解・比較・判断に必要な具体情報', '不安や疑問を解消する補足', '関連ページと主要CTA'],
+  },
+};
+
+const subpageLengths = {
+  single: ['full'],
+  two: ['upper', 'lower'],
+  three: ['upper', 'middle', 'lower'],
 };
 
 const pageStructures = {
@@ -339,8 +393,19 @@ function init() {
     audienceDetail: document.getElementById('audience-detail'),
     audienceCustomField: document.getElementById('audience-custom-field'),
     deliverable: document.getElementById('deliverable'),
+    productionMode: document.getElementById('production-mode'),
+    productionModeField: document.getElementById('production-mode-field'),
     mockupScope: document.getElementById('mockup-scope'),
     mockupScopeField: document.getElementById('mockup-scope-field'),
+    subpageSettings: document.getElementById('subpage-settings'),
+    subpageType: document.getElementById('subpage-type'),
+    subpageName: document.getElementById('subpage-name'),
+    subpagePurpose: document.getElementById('subpage-purpose'),
+    subpageContent: document.getElementById('subpage-content'),
+    subpageCta: document.getElementById('subpage-cta'),
+    subpageLength: document.getElementById('subpage-length'),
+    impressionField: document.getElementById('impression-field'),
+    advancedSettings: document.getElementById('advanced-settings'),
     generateLabel: document.getElementById('generate-label'),
     chips: Array.from(document.querySelectorAll('.chip')),
     impressionCount: document.getElementById('impression-count'),
@@ -356,6 +421,7 @@ function init() {
     resultPanel: document.querySelector('.result-panel'),
     singleResult: document.getElementById('single-result'),
     splitResults: document.getElementById('split-results'),
+    workflowNote: document.getElementById('workflow-note'),
     output: document.getElementById('prompt-output'),
     copyButton: document.getElementById('copy-button'),
     copyLabel: document.getElementById('copy-label'),
@@ -366,6 +432,12 @@ function init() {
     partCharacterCounts: Array.from(document.querySelectorAll('.part-character-count')),
     designLockInput: document.getElementById('design-lock-input'),
     applyDesignLockButton: document.getElementById('apply-design-lock'),
+    applyDesignLockLabel: document.getElementById('apply-design-lock-label'),
+    designLockHelp: document.getElementById('design-lock-help'),
+    partCards: ['spec', 'top', 'middle', 'bottom'].map((key) => document.getElementById(`part-card-${key}`)),
+    partLabels: ['spec', 'top', 'middle', 'bottom'].map((key) => document.getElementById(`part-label-${key}`)),
+    partTitles: ['spec', 'top', 'middle', 'bottom'].map((key) => document.getElementById(`part-title-${key}`)),
+    partHints: ['spec', 'top', 'middle', 'bottom'].map((key) => document.getElementById(`part-hint-${key}`)),
   };
 
   if (!elements.form || !elements.output) return;
@@ -374,7 +446,9 @@ function init() {
   elements.form.addEventListener('reset', handleReset);
   elements.audience.addEventListener('change', handleAudienceChange);
   elements.deliverable.addEventListener('change', updateGenerateLabel);
+  elements.productionMode.addEventListener('change', handleProductionModeChange);
   elements.mockupScope.addEventListener('change', updateResultMode);
+  elements.subpageLength.addEventListener('change', handleSubpageLengthChange);
   elements.copyButton.addEventListener('click', handleCopy);
   elements.output.addEventListener('input', updateOutputState);
   elements.partOutputs.forEach((output) => output.addEventListener('input', updateOutputState));
@@ -397,7 +471,10 @@ function registerWebMcpTool() {
     goal: Object.keys(goals),
     audience: ['auto', ...Object.keys(audienceLabels), 'custom'],
     deliverable: Object.keys(deliverables),
+    productionMode: Object.keys(productionModes),
     mockupScope: Object.keys(mockupScopes),
+    subpageType: Object.keys(subpageTypes),
+    subpageLength: Object.keys(subpageLengths),
     impressions: Object.keys(impressions),
     color: Object.keys(optionDetails.color),
     style: Object.keys(optionDetails.style),
@@ -422,7 +499,14 @@ function registerWebMcpTool() {
         audience: enumProperty(allowedValues.audience, '想定ユーザーのID'),
         audienceDetail: { type: 'string', maxLength: 120, description: '具体的な想定ユーザー' },
         deliverable: enumProperty(allowedValues.deliverable, '次に作りたいもののID'),
+        productionMode: enumProperty(allowedValues.productionMode, 'トップページまたは下層ページのID'),
         mockupScope: enumProperty(allowedValues.mockupScope, 'モックアップ画像に含める表示範囲のID'),
+        subpageType: enumProperty(allowedValues.subpageType, '下層ページ種別のID'),
+        subpageName: { type: 'string', maxLength: 100, description: '下層ページ名' },
+        subpagePurpose: { type: 'string', maxLength: 180, description: '下層ページ固有の目的' },
+        subpageContent: { type: 'string', maxLength: 800, description: '下層ページへ必ず含める内容' },
+        subpageCta: { type: 'string', maxLength: 100, description: '下層ページの主要CTA' },
+        subpageLength: enumProperty(allowedValues.subpageLength, '下層ページ画像の分割数ID'),
         impressions: {
           type: 'array',
           items: enumProperty(allowedValues.impressions, '印象のID'),
@@ -463,7 +547,14 @@ function registerWebMcpTool() {
         audience: validOptional(input.audience, allowedValues.audience, 'auto'),
         audienceDetail: stringValue(input.audienceDetail, 120),
         deliverable: validOptional(input.deliverable, allowedValues.deliverable, 'image'),
+        productionMode: validOptional(input.productionMode, allowedValues.productionMode, 'top'),
         mockupScope: validOptional(input.mockupScope, allowedValues.mockupScope, 'set'),
+        subpageType: validOptional(input.subpageType, allowedValues.subpageType, 'service-detail'),
+        subpageName: stringValue(input.subpageName, 100),
+        subpagePurpose: stringValue(input.subpagePurpose, 180),
+        subpageContent: stringValue(input.subpageContent, 800),
+        subpageCta: stringValue(input.subpageCta, 100),
+        subpageLength: validOptional(input.subpageLength, allowedValues.subpageLength, 'three'),
         color: validOptional(input.color, allowedValues.color, 'auto'),
         style: validOptional(input.style, allowedValues.style, 'auto'),
         spacing: validOptional(input.spacing, allowedValues.spacing, 'auto'),
@@ -485,7 +576,14 @@ function registerWebMcpTool() {
       elements.audience.value = nextValues.audience;
       elements.audienceDetail.value = nextValues.audienceDetail;
       elements.deliverable.value = nextValues.deliverable;
+      elements.productionMode.value = nextValues.productionMode;
       elements.mockupScope.value = nextValues.mockupScope;
+      elements.subpageType.value = nextValues.subpageType;
+      elements.subpageName.value = nextValues.subpageName;
+      elements.subpagePurpose.value = nextValues.subpagePurpose;
+      elements.subpageContent.value = nextValues.subpageContent;
+      elements.subpageCta.value = nextValues.subpageCta;
+      elements.subpageLength.value = nextValues.subpageLength;
       updateGenerateLabel();
       elements.color.value = nextValues.color;
       elements.style.value = nextValues.style;
@@ -547,25 +645,106 @@ function handleAudienceChange() {
 
 function updateGenerateLabel() {
   elements.generateLabel.textContent = generateLabels[elements.deliverable.value] || generateLabels.image;
-  elements.mockupScopeField.hidden = elements.deliverable.value !== 'image';
+  const imageMode = elements.deliverable.value === 'image';
+  elements.productionModeField.hidden = !imageMode;
+  updateProductionMode();
+}
+
+function updateProductionMode() {
+  const imageMode = elements.deliverable.value === 'image';
+  const subpageMode = imageMode && elements.productionMode.value === 'subpage';
+  elements.mockupScopeField.hidden = !imageMode || subpageMode;
+  elements.subpageSettings.hidden = !subpageMode;
+  elements.impressionField.hidden = subpageMode;
+  elements.advancedSettings.hidden = subpageMode;
   updateResultMode();
 }
 
-function isThreePartMode() {
-  return elements.deliverable.value === 'image' && elements.mockupScope.value === 'set';
+function handleProductionModeChange() {
+  elements.output.value = '';
+  elements.partOutputs.forEach((output) => { output.value = ''; });
+  updateProductionMode();
+  updateOutputState();
+}
+
+function handleSubpageLengthChange() {
+  const designLock = sanitizeText(elements.designLockInput.value);
+  const prompts = designLock ? buildSubpagePromptParts() : { spec: '', top: '', middle: '', bottom: '' };
+  const keys = ['spec', 'top', 'middle', 'bottom'];
+  elements.partOutputs.forEach((output, index) => { output.value = prompts[keys[index]]; });
+  updateOutputState();
+}
+
+function isTopGuidedMode() {
+  return elements.deliverable.value === 'image' && elements.productionMode.value === 'top' && elements.mockupScope.value === 'set';
+}
+
+function isSubpageMode() {
+  return elements.deliverable.value === 'image' && elements.productionMode.value === 'subpage';
+}
+
+function isGuidedMode() {
+  return isTopGuidedMode() || isSubpageMode();
 }
 
 function updateResultMode() {
   if (!elements.singleResult || !elements.splitResults) return;
-  const splitMode = isThreePartMode();
+  const splitMode = isGuidedMode();
   elements.singleResult.hidden = splitMode;
   elements.splitResults.hidden = !splitMode;
   elements.copyButton.hidden = splitMode;
   elements.resultPanel?.classList.toggle('split-mode', splitMode);
+  if (splitMode) configureGuidedOutputCards();
+}
+
+function configureGuidedOutputCards() {
+  if (isTopGuidedMode()) {
+    elements.workflowNote.textContent = '同じChatGPTチャットで、STEP 1から順番に使用してください。最初に共通仕様書を確定すると、3枚のデザインを揃えやすくなります。';
+    elements.designLockHelp.textContent = 'STEP 1の返答を貼り付けて反映してください。確定したカラーコードなどを、以降の3つのプロンプトへ直接埋め込みます。';
+    elements.applyDesignLockLabel.textContent = '仕様書を3つのプロンプトへ反映';
+    const definitions = [
+      ['STEP 1 / DESIGN LOCK', '共通デザイン仕様書用', '最初に送信して仕様書を確定'],
+      ['STEP 2 / TOP', 'ページ上部用', '共通仕様書の確定後に使用'],
+      ['STEP 3 / MIDDLE', 'ページ中部用', '上部の生成後に使用'],
+      ['STEP 4 / BOTTOM', 'ページ下部用', '中部の生成後に使用'],
+    ];
+    definitions.forEach((definition, index) => setPartCard(index, true, definition));
+    return;
+  }
+
+  const segmentKeys = subpageLengths[elements.subpageLength.value] || subpageLengths.three;
+  elements.workflowNote.textContent = 'トップページを生成した同じChatGPTチャットで、確定済みの共通デザイン仕様書とトップページ画像を参照させてください。下層ページ固有の情報設計だけを変更します。';
+  elements.designLockHelp.textContent = 'トップページ制作時に確定した「Common Design Specification — Design Lock v1」を貼り付けてください。各下層ページプロンプトへ全文を直接埋め込みます。';
+  elements.applyDesignLockLabel.textContent = `仕様書を${segmentKeys.length}つのプロンプトへ反映`;
+  setPartCard(0, false);
+
+  const labels = {
+    full: ['SUBPAGE / FULL', '下層ページ全体用', '共通仕様書とトップページ画像を参照して使用'],
+    upper: ['SUBPAGE 1 / UPPER', '下層ページ上部用', '最初に生成'],
+    middle: ['SUBPAGE 2 / MIDDLE', '下層ページ中部用', '上部の生成後に使用'],
+    lower: ['SUBPAGE 3 / LOWER', '下層ページ下部用', '先行画像の生成後に使用'],
+  };
+  [1, 2, 3].forEach((cardIndex, segmentIndex) => {
+    const key = segmentKeys[segmentIndex];
+    setPartCard(cardIndex, Boolean(key), key ? labels[key] : null);
+  });
+}
+
+function setPartCard(index, visible, definition = null) {
+  elements.partCards[index].hidden = !visible;
+  if (!visible || !definition) return;
+  elements.partLabels[index].textContent = definition[0];
+  elements.partTitles[index].textContent = definition[1];
+  elements.partHints[index].textContent = definition[2];
 }
 
 function getGenerationSuccessMessage() {
-  if (!isThreePartMode()) return 'プロンプトを生成しました。右側で確認・編集できます。';
+  if (!isGuidedMode()) return 'プロンプトを生成しました。右側で確認・編集できます。';
+  if (isSubpageMode()) {
+    const count = (subpageLengths[elements.subpageLength.value] || subpageLengths.three).length;
+    if (sanitizeText(elements.designLockInput.value)) return `共通仕様書を全文埋め込んだ下層ページ用プロンプトを${count}つ作成しました。`;
+    return 'トップページ制作時の共通デザイン仕様書を貼り付けて反映してください。';
+  }
   if (sanitizeText(elements.designLockInput.value)) {
     return '確定した共通仕様書を埋め込んだ3つの画像生成プロンプトを作成しました。';
   }
@@ -611,6 +790,14 @@ function handleGenerate(event) {
       elements.status.className = 'form-status';
       elements.status.textContent = '想定ユーザーを入力してください。';
       elements.audienceDetail.focus();
+      return;
+    }
+
+    if (isSubpageMode() && !elements.subpageType.value) {
+      elements.subpageType.setAttribute('aria-invalid', 'true');
+      elements.status.className = 'form-status';
+      elements.status.textContent = '下層ページの種別を選択してください。';
+      elements.subpageType.focus();
       return;
     }
 
@@ -742,15 +929,136 @@ function getGenerationContext() {
     animation: optionDetails.animation[elements.animation.value],
     avoid: sanitizeText(elements.avoid.value),
     request: sanitizeText(elements.request.value),
+    productionMode: elements.productionMode.value,
     mockupScope: elements.mockupScope.value,
     designLock: sanitizeText(elements.designLockInput.value),
+    subpageType: elements.subpageType.value,
+    subpageName: sanitizeText(elements.subpageName.value),
+    subpagePurpose: sanitizeText(elements.subpagePurpose.value),
+    subpageContent: sanitizeText(elements.subpageContent.value),
+    subpageCta: sanitizeText(elements.subpageCta.value),
+    subpageLength: elements.subpageLength.value,
   };
 }
 
 function buildImageMockupPrompt() {
   const context = getGenerationContext();
+  if (context.productionMode === 'subpage') return buildSubpagePromptSet(context);
   if (context.mockupScope === 'set') return buildGuidedPromptSet(context);
   return buildSingleImageMockupPrompt(context, context.mockupScope);
+}
+
+function buildActiveGuidedPromptParts(context = getGenerationContext()) {
+  return context.productionMode === 'subpage'
+    ? buildSubpagePromptParts(context)
+    : buildGuidedPromptParts(context);
+}
+
+function buildSubpagePromptSet(context) {
+  if (!context.designLock) return '';
+  const prompts = buildSubpagePromptParts(context);
+  return Object.values(prompts).filter(Boolean).join('\n\n');
+}
+
+function buildSubpagePromptParts(context = getGenerationContext()) {
+  const keys = subpageLengths[context.subpageLength] || subpageLengths.three;
+  const prompts = { spec: '', top: '', middle: '', bottom: '' };
+  if (!context.designLock) return prompts;
+  keys.forEach((segmentKey, index) => {
+    prompts[['top', 'middle', 'bottom'][index]] = buildSubpageImagePrompt(context, segmentKey, index, keys.length);
+  });
+  return prompts;
+}
+
+function buildSubpageImagePrompt(context, segmentKey, segmentIndex, segmentCount) {
+  const pageType = subpageTypes[context.subpageType] || subpageTypes.other;
+  const pageName = context.subpageName || pageType.label;
+  const ranges = {
+    full: pageType.sections,
+    upper: pageType.sections.slice(0, 2),
+    middle: pageType.sections.slice(2, 4),
+    lower: pageType.sections.slice(4),
+  };
+  const segmentLabels = { full: 'ページ全体', upper: 'ページ上部', middle: 'ページ中部', lower: 'ページ下部' };
+  const segmentLabel = segmentLabels[segmentKey];
+  const referenceRules = segmentIndex === 0
+    ? [
+      'このチャットで先に生成したトップページ画像を参照し、同じWebサイトの下層ページとして生成する。',
+      'トップページ画像を参照できない場合は生成せず、画像の添付または同じチャットでの作業を依頼する。',
+    ]
+    : [
+      `このチャットで先に生成したトップページ画像と、この下層ページの先行画像${segmentIndex === 1 ? '（上部）' : '（上部・中部）'}をすべて参照する。`,
+      '先行画像を参照できない場合は生成せず、不足している画像を伝える。',
+    ];
+  const framing = segmentKey === 'full'
+    ? [
+      'デスクトップWebサイトの下層ページ全体を、正面から見た縦長の1枚として描画する。',
+      'トップページと同一のヘッダーから始まり、同一のフッターで終える。',
+      '文字や余白を縮小して詰め込まず、収まらない補助情報は省略する。',
+    ]
+    : [
+      `デスクトップWebサイトの下層ページの${segmentLabel}だけを、正面から見た縦長の1枚として描画する。`,
+      `${segmentLabel}以外の範囲を混在させず、指定部分の情報階層と余白を十分に見せる。`,
+      ...(segmentKey === 'upper' ? ['トップページと同一のヘッダーを画像上端に含める。'] : []),
+      ...(segmentKey === 'lower' ? ['トップページと同一のフッターを画像下端に含める。'] : []),
+    ];
+
+  return [
+    `# Subpage Website UI Mockup Image Prompt — ${pageName} / ${segmentLabel}`,
+    '',
+    `Create a high-fidelity, production-ready website UI mockup for the ${segmentLabel} of the “${pageName}” subpage on the existing ${context.industryName} ${context.site.label}.`,
+    '新しいサイト案ではなく、すでに制作したトップページと同一サイトの下層ページとして描画してください。',
+    '',
+    '## Non-negotiable Continuity',
+    ...referenceRules.map((rule) => `- ${rule}`),
+    '- 変更してよいのは、下層ページ固有の情報構成、見出し、本文、必要なコンテンツ配置だけとする。',
+    '- ロゴ、ヘッダー、グローバルナビゲーション、フッター、CTAの優先順位、配色、書体、文字階層、コンテンツ幅、グリッド、余白スケール、ボタン、罫線、角丸、影、アイコン、写真の色調は変更しない。',
+    '- 現在ページに対応するグローバルナビゲーションの選択状態と、Design Lockに適合するパンくずリストを設ける。',
+    '- 下記のEmbedded Design Lockを、会話履歴・参照画像・このプロンプト内の他の記述より優先する。',
+    '',
+    '## Embedded Design Lock — Verbatim',
+    '<design_lock>',
+    context.designLock,
+    '</design_lock>',
+    '',
+    '## Subpage Definition',
+    `- ページ種別：${pageType.label}`,
+    `- ページ名：${pageName}`,
+    `- ページの目的：${context.subpagePurpose || `${pageType.label}として必要な情報を理解・判断でき、サイト全体の主要行動へ自然に進めるようにする。`}`,
+    `- 想定ユーザー：${context.audience}`,
+    `- 必ず含める内容：${context.subpageContent || 'ページ種別と目的から必要な内容を判断する。根拠のない情報は追加しない。'}`,
+    `- 主要CTA：${context.subpageCta || context.goal.label}`,
+    '',
+    '## Canvas / Framing',
+    `- 全${segmentCount}枚のうち${segmentIndex + 1}枚目：${segmentLabel}`,
+    ...framing.map((rule) => `- ${rule}`),
+    '- デバイス枠、プレゼンテーションボード、注釈、カラーパレット見本、周囲の装飾を付けない。',
+    '- 画像全体をWebサイトのUIだけで構成する。',
+    '',
+    '## Information Architecture for This Image',
+    ...(ranges[segmentKey] || pageType.sections).map((section, index) => `${index + 1}. ${section}`),
+    '- トップページの構成をそのまま複製せず、この下層ページの目的に適した情報階層にする。',
+    '- ただし視覚言語やUIコンポーネントを新しく発明せず、Design Lockに定義済みのパターンを再利用する。',
+    '',
+    '## Rendering Priorities',
+    '1. Embedded Design Lockに記載された具体値と使用規則をそのまま維持する',
+    '2. トップページ画像と先行画像のブランド表現・UI部品を維持する',
+    '3. 読みやすい文字サイズと、Design Lockどおりの余白リズムを保つ',
+    '4. この下層ページ固有の目的と情報階層を表現する',
+    '5. 補助的な文章や要素を収める',
+    '- 収まらない場合は余白や文字を縮小せず、優先度の低い文章・項目を省略する。',
+    '- 日本語本文は1ブロック2〜3行を目安にし、意味不明な文字列やLorem ipsumを使わない。',
+    '- 根拠のない実績値、受賞歴、顧客ロゴ、評価、人物名を追加しない。',
+    '- Design Lockにない新しい色相、グラデーション、影、角丸、装飾スタイル、UI部品を追加しない。',
+    '',
+    '## Preflight Check — Must Pass Before Rendering',
+    '- Design LockからPrimary、Accent、Background、Surface、Text、Muted text、BorderのHEX値を抽出し、指定用途と一致しているか内部確認する。',
+    '- ヘッダー、フッター、ロゴ、ナビゲーション、CTA、ボタン、文字階層、コンテンツ幅、グリッド、余白、角丸、影、写真の色調がトップページと一致しているか確認する。',
+    '- 1つでも不一致があれば、新しい解釈を採用せずDesign Lockと参照画像の値へ戻してから生成する。',
+    '',
+    '## Output',
+    `Design Lockと参照画像を継承した「${pageName}」下層ページの${segmentLabel}モックアップ画像を1枚、直接生成してください。条件が揃っている場合、説明やデザイン解説は不要です。`,
+  ].join('\n');
 }
 
 function buildGuidedPromptSet(context) {
@@ -1132,12 +1440,13 @@ async function copyTextArea(output, label) {
 }
 
 function handleDesignLockInput() {
-  const hadGeneratedParts = elements.partOutputs.slice(1).some((output) => output.value);
-  elements.partOutputs.slice(1).forEach((output) => { output.value = ''; });
+  const targets = isSubpageMode() ? elements.partOutputs : elements.partOutputs.slice(1);
+  const hadGeneratedParts = targets.some((output) => output.value);
+  targets.forEach((output) => { output.value = ''; });
   elements.applyDesignLockButton.disabled = !sanitizeText(elements.designLockInput.value);
   if (hadGeneratedParts) {
     elements.status.className = 'form-status';
-    elements.status.textContent = '共通仕様書が変更されました。もう一度、3つのプロンプトへ反映してください。';
+    elements.status.textContent = '共通仕様書が変更されました。もう一度、生成プロンプトへ反映してください。';
   }
   updateOutputState();
 }
@@ -1154,22 +1463,23 @@ function applyDesignLock() {
     return;
   }
 
-  const prompts = buildGuidedPromptParts();
+  const prompts = buildActiveGuidedPromptParts();
   const keys = ['spec', 'top', 'middle', 'bottom'];
   elements.partOutputs.forEach((output, index) => {
-    if (index === 0 && output.value) return;
     output.value = prompts[keys[index]];
   });
   elements.status.className = 'form-status success';
-  elements.status.textContent = '共通仕様書を上部・中部・下部のプロンプトへ直接埋め込みました。';
+  elements.status.textContent = isSubpageMode()
+    ? `共通仕様書を下層ページ用の${(subpageLengths[elements.subpageLength.value] || subpageLengths.three).length}つのプロンプトへ直接埋め込みました。`
+    : '共通仕様書を上部・中部・下部のプロンプトへ直接埋め込みました。';
   updateOutputState();
 }
 
 function renderPromptResult(prompt) {
   updateResultMode();
 
-  if (isThreePartMode()) {
-    const prompts = buildGuidedPromptParts();
+  if (isGuidedMode()) {
+    const prompts = buildActiveGuidedPromptParts();
     const keys = ['spec', 'top', 'middle', 'bottom'];
     elements.partOutputs.forEach((output, index) => {
       output.value = prompts[keys[index]];
@@ -1199,7 +1509,7 @@ function updateOutputState() {
 }
 
 function clearValidation() {
-  [elements.siteType, elements.industry, elements.goal, elements.audienceDetail]
+  [elements.siteType, elements.industry, elements.goal, elements.audienceDetail, elements.subpageType]
     .forEach((field) => field.removeAttribute('aria-invalid'));
   elements.status.textContent = '';
   elements.status.className = 'form-status';

@@ -13,7 +13,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2317243d'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Georgia,serif' font-size='38' fill='white'%3EW%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="assets/css/style.css?v=9" />
+    <link rel="stylesheet" href="assets/css/style.css?v=10" />
   </head>
   <body>
     <a class="skip-link" href="#builder">入力フォームへ移動</a>
@@ -156,7 +156,17 @@
                 <p class="field-hint">構成検討や実装用の指示にも切り替えられます。</p>
               </div>
 
-              <div class="field" id="mockup-scope-field">
+              <div class="field" id="production-mode-field">
+                <label for="production-mode">制作するページ</label>
+                <select id="production-mode" name="productionMode">
+                  <option value="top">トップページ</option>
+                  <option value="subpage">下層ページ</option>
+                </select>
+                <p class="field-hint">下層ページでは、確定済みの共通仕様書を引き継ぎます。</p>
+              </div>
+            </div>
+
+            <div class="field" id="mockup-scope-field">
                 <label for="mockup-scope">画像に含める範囲</label>
                 <select id="mockup-scope" name="mockupScope">
                   <option value="set">上部・中部・下部の3分割セット（おすすめ）</option>
@@ -168,10 +178,64 @@
                   <option value="bottom">ページ下部</option>
                 </select>
                 <p class="field-hint">範囲を絞るほど、余白や文字サイズを保ちやすくなります。</p>
-              </div>
             </div>
 
-            <fieldset class="field impression-field">
+            <section class="subpage-settings" id="subpage-settings" aria-labelledby="subpage-settings-title" hidden>
+              <div class="subpage-settings-heading">
+                <p class="step-label">SUBPAGE</p>
+                <h3 id="subpage-settings-title">下層ページの条件</h3>
+                <p>トップページで確定したデザインは変えず、このページ固有の情報設計だけを指定します。</p>
+              </div>
+
+              <div class="field-grid two-columns">
+                <div class="field">
+                  <label for="subpage-type">ページ種別 <span class="required">＊</span></label>
+                  <select id="subpage-type" name="subpageType">
+                    <option value="service-list">サービス一覧</option>
+                    <option value="service-detail">サービス詳細</option>
+                    <option value="case-list">事例一覧</option>
+                    <option value="case-detail">事例詳細</option>
+                    <option value="about">会社・事務所案内</option>
+                    <option value="staff">スタッフ紹介</option>
+                    <option value="recruitment">採用情報</option>
+                    <option value="faq">よくある質問</option>
+                    <option value="contact">お問い合わせ</option>
+                    <option value="other">その他</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="subpage-name">ページ名 <span class="optional">任意</span></label>
+                  <input id="subpage-name" name="subpageName" type="text" maxlength="100" placeholder="例：税務顧問サービス" />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="subpage-purpose">このページの目的 <span class="optional">任意</span></label>
+                <input id="subpage-purpose" name="subpagePurpose" type="text" maxlength="180" placeholder="例：対応内容と支援の進め方を理解してもらい、相談につなげる" />
+              </div>
+
+              <div class="field">
+                <label for="subpage-content">必ず含めたい内容 <span class="optional">任意</span></label>
+                <textarea id="subpage-content" name="subpageContent" rows="4" maxlength="800" placeholder="例：対応業務、料金の考え方、支援の流れ、よくある質問"></textarea>
+              </div>
+
+              <div class="field-grid two-columns">
+                <div class="field">
+                  <label for="subpage-cta">主要CTA <span class="optional">任意</span></label>
+                  <input id="subpage-cta" name="subpageCta" type="text" maxlength="100" placeholder="例：このサービスについて相談する" />
+                </div>
+                <div class="field">
+                  <label for="subpage-length">画像の分割</label>
+                  <select id="subpage-length" name="subpageLength">
+                    <option value="three">上部・中部・下部の3分割（おすすめ）</option>
+                    <option value="two">上部・下部の2分割</option>
+                    <option value="single">1枚で全体を生成</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <fieldset class="field impression-field" id="impression-field">
               <div class="legend-row">
                 <legend>与えたい印象 <span class="optional">最大3つ・任意</span></legend>
                 <span id="impression-count" class="selection-count" aria-live="polite">0 / 3</span>
@@ -196,7 +260,7 @@
               <p class="field-message" id="impression-message" aria-live="polite"></p>
             </fieldset>
 
-            <details class="advanced-settings">
+            <details class="advanced-settings" id="advanced-settings">
               <summary>
                 <span class="summary-icon" aria-hidden="true"></span>
                 もっと詳しく指定する
@@ -325,15 +389,15 @@
           </div>
 
           <div class="split-results" id="split-results" hidden>
-            <p class="workflow-note">
+            <p class="workflow-note" id="workflow-note">
               同じChatGPTチャットで、STEP 1から順番に使用してください。最初に共通仕様書を確定すると、3枚のデザインを揃えやすくなります。
             </p>
 
-            <article class="split-result">
+            <article class="split-result" id="part-card-spec">
               <div class="split-result-heading">
                 <div>
-                  <p class="part-label">STEP 1 / DESIGN LOCK</p>
-                  <h3>共通デザイン仕様書用</h3>
+                  <p class="part-label" id="part-label-spec">STEP 1 / DESIGN LOCK</p>
+                  <h3 id="part-title-spec">共通デザイン仕様書用</h3>
                 </div>
                 <button type="button" class="copy-button part-copy-button" data-target="prompt-output-spec" disabled>
                   <span class="copy-icon" aria-hidden="true"></span>
@@ -349,13 +413,13 @@
               ></textarea>
               <div class="result-footer">
                 <p class="part-character-count">0文字</p>
-                <p>最初に送信して仕様書を確定</p>
+                <p id="part-hint-spec">最初に送信して仕様書を確定</p>
               </div>
             </article>
 
-            <div class="design-lock-capture">
+            <div class="design-lock-capture" id="design-lock-capture">
               <label for="design-lock-input">ChatGPTが作成した共通デザイン仕様書</label>
-              <p>
+              <p id="design-lock-help">
                 STEP 1の返答を貼り付けて反映してください。確定したカラーコードなどを、以降の3つのプロンプトへ直接埋め込みます。
               </p>
               <textarea
@@ -366,15 +430,15 @@
                 placeholder="「# Common Design Specification — Design Lock v1」から始まる仕様書を貼り付けてください。"
               ></textarea>
               <button type="button" class="button apply-lock-button" id="apply-design-lock" disabled>
-                仕様書を3つのプロンプトへ反映
+                <span id="apply-design-lock-label">仕様書を3つのプロンプトへ反映</span>
               </button>
             </div>
 
-            <article class="split-result">
+            <article class="split-result" id="part-card-top">
               <div class="split-result-heading">
                 <div>
-                  <p class="part-label">STEP 2 / TOP</p>
-                  <h3>ページ上部用</h3>
+                  <p class="part-label" id="part-label-top">STEP 2 / TOP</p>
+                  <h3 id="part-title-top">ページ上部用</h3>
                 </div>
                 <button type="button" class="copy-button part-copy-button" data-target="prompt-output-top" disabled>
                   <span class="copy-icon" aria-hidden="true"></span>
@@ -390,15 +454,15 @@
               ></textarea>
               <div class="result-footer">
                 <p class="part-character-count">0文字</p>
-                <p>共通仕様書の確定後に使用</p>
+                <p id="part-hint-top">共通仕様書の確定後に使用</p>
               </div>
             </article>
 
-            <article class="split-result">
+            <article class="split-result" id="part-card-middle">
               <div class="split-result-heading">
                 <div>
-                  <p class="part-label">STEP 3 / MIDDLE</p>
-                  <h3>ページ中部用</h3>
+                  <p class="part-label" id="part-label-middle">STEP 3 / MIDDLE</p>
+                  <h3 id="part-title-middle">ページ中部用</h3>
                 </div>
                 <button type="button" class="copy-button part-copy-button" data-target="prompt-output-middle" disabled>
                   <span class="copy-icon" aria-hidden="true"></span>
@@ -414,15 +478,15 @@
               ></textarea>
               <div class="result-footer">
                 <p class="part-character-count">0文字</p>
-                <p>上部の生成後に使用</p>
+                <p id="part-hint-middle">上部の生成後に使用</p>
               </div>
             </article>
 
-            <article class="split-result">
+            <article class="split-result" id="part-card-bottom">
               <div class="split-result-heading">
                 <div>
-                  <p class="part-label">STEP 4 / BOTTOM</p>
-                  <h3>ページ下部用</h3>
+                  <p class="part-label" id="part-label-bottom">STEP 4 / BOTTOM</p>
+                  <h3 id="part-title-bottom">ページ下部用</h3>
                 </div>
                 <button type="button" class="copy-button part-copy-button" data-target="prompt-output-bottom" disabled>
                   <span class="copy-icon" aria-hidden="true"></span>
@@ -438,7 +502,7 @@
               ></textarea>
               <div class="result-footer">
                 <p class="part-character-count">0文字</p>
-                <p>中部の生成後に使用</p>
+                <p id="part-hint-bottom">中部の生成後に使用</p>
               </div>
             </article>
           </div>
@@ -451,6 +515,6 @@
       <p>入力内容は外部へ送信されません。</p>
     </footer>
 
-    <script src="assets/js/app.js?v=9" defer></script>
+    <script src="assets/js/app.js?v=10" defer></script>
   </body>
 </html>
