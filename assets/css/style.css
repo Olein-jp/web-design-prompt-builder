@@ -576,6 +576,47 @@ summary:focus-visible {
   line-height: 1.7;
 }
 
+.design-lock-capture {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--line-strong);
+  background: #fffefb;
+}
+
+.design-lock-capture label {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.design-lock-capture p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.design-lock-capture textarea {
+  min-height: 180px;
+  resize: vertical;
+}
+
+.apply-lock-button {
+  width: 100%;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.apply-lock-button:not(:disabled):hover {
+  background: #26344b;
+}
+
+.apply-lock-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .split-result {
   padding-top: 22px;
   border-top: 1px solid var(--line-strong);

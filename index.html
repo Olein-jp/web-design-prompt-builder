@@ -13,7 +13,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2317243d'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Georgia,serif' font-size='38' fill='white'%3EW%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="assets/css/style.css?v=8" />
+    <link rel="stylesheet" href="assets/css/style.css?v=9" />
   </head>
   <body>
     <a class="skip-link" href="#builder">入力フォームへ移動</a>
@@ -353,6 +353,23 @@
               </div>
             </article>
 
+            <div class="design-lock-capture">
+              <label for="design-lock-input">ChatGPTが作成した共通デザイン仕様書</label>
+              <p>
+                STEP 1の返答を貼り付けて反映してください。確定したカラーコードなどを、以降の3つのプロンプトへ直接埋め込みます。
+              </p>
+              <textarea
+                id="design-lock-input"
+                rows="7"
+                maxlength="20000"
+                spellcheck="false"
+                placeholder="「# Common Design Specification — Design Lock v1」から始まる仕様書を貼り付けてください。"
+              ></textarea>
+              <button type="button" class="button apply-lock-button" id="apply-design-lock" disabled>
+                仕様書を3つのプロンプトへ反映
+              </button>
+            </div>
+
             <article class="split-result">
               <div class="split-result-heading">
                 <div>
@@ -369,7 +386,7 @@
                 class="prompt-output part-output"
                 aria-label="ページ上部用のプロンプト。内容を編集できます"
                 spellcheck="false"
-                placeholder="生成すると、ページ上部用のプロンプトが表示されます。"
+                placeholder="共通デザイン仕様書を貼り付けて反映すると、ページ上部用のプロンプトが表示されます。"
               ></textarea>
               <div class="result-footer">
                 <p class="part-character-count">0文字</p>
@@ -393,7 +410,7 @@
                 class="prompt-output part-output"
                 aria-label="ページ中部用のプロンプト。内容を編集できます"
                 spellcheck="false"
-                placeholder="生成すると、ページ中部用のプロンプトが表示されます。"
+                placeholder="共通デザイン仕様書を貼り付けて反映すると、ページ中部用のプロンプトが表示されます。"
               ></textarea>
               <div class="result-footer">
                 <p class="part-character-count">0文字</p>
@@ -417,7 +434,7 @@
                 class="prompt-output part-output"
                 aria-label="ページ下部用のプロンプト。内容を編集できます"
                 spellcheck="false"
-                placeholder="生成すると、ページ下部用のプロンプトが表示されます。"
+                placeholder="共通デザイン仕様書を貼り付けて反映すると、ページ下部用のプロンプトが表示されます。"
               ></textarea>
               <div class="result-footer">
                 <p class="part-character-count">0文字</p>
@@ -434,6 +451,6 @@
       <p>入力内容は外部へ送信されません。</p>
     </footer>
 
-    <script src="assets/js/app.js?v=8" defer></script>
+    <script src="assets/js/app.js?v=9" defer></script>
   </body>
 </html>

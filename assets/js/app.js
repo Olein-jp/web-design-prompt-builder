@@ -364,6 +364,8 @@ function init() {
     partOutputs: Array.from(document.querySelectorAll('.part-output')),
     partCopyButtons: Array.from(document.querySelectorAll('.part-copy-button')),
     partCharacterCounts: Array.from(document.querySelectorAll('.part-character-count')),
+    designLockInput: document.getElementById('design-lock-input'),
+    applyDesignLockButton: document.getElementById('apply-design-lock'),
   };
 
   if (!elements.form || !elements.output) return;
@@ -377,6 +379,8 @@ function init() {
   elements.output.addEventListener('input', updateOutputState);
   elements.partOutputs.forEach((output) => output.addEventListener('input', updateOutputState));
   elements.partCopyButtons.forEach((button) => button.addEventListener('click', handlePartCopy));
+  elements.designLockInput.addEventListener('input', handleDesignLockInput);
+  elements.applyDesignLockButton.addEventListener('click', applyDesignLock);
   elements.chips.forEach((chip) => chip.addEventListener('click', handleChipClick));
   updateGenerateLabel();
   updateResultMode();
@@ -432,6 +436,7 @@ function registerWebMcpTool() {
         animation: enumProperty(allowedValues.animation, 'アニメーションのID'),
         avoid: { type: 'string', maxLength: 400, description: '避けたいデザイン表現や見せ方' },
         request: { type: 'string', maxLength: 600, description: '自由要望' },
+        designLock: { type: 'string', maxLength: 20000, description: 'ChatGPTで確定した共通デザイン仕様書' },
       },
       required: ['siteType', 'industry', 'goal'],
       additionalProperties: false,
@@ -466,6 +471,7 @@ function registerWebMcpTool() {
         animation: validOptional(input.animation, allowedValues.animation, 'auto'),
         avoid: stringValue(input.avoid, 400),
         request: stringValue(input.request, 600),
+        designLock: stringValue(input.designLock, 20000),
       };
 
       if (nextValues.audience === 'custom' && !nextValues.audienceDetail.trim()) {
@@ -488,6 +494,7 @@ function registerWebMcpTool() {
       elements.animation.value = nextValues.animation;
       elements.avoid.value = nextValues.avoid;
       elements.request.value = nextValues.request;
+      elements.designLockInput.value = nextValues.designLock;
 
       selectedImpressions = [...impressionValues];
       elements.chips.forEach((chip) => {
@@ -499,9 +506,7 @@ function registerWebMcpTool() {
       const prompt = buildPrompt();
       renderPromptResult(prompt);
       elements.status.className = 'form-status success';
-      elements.status.textContent = isThreePartMode()
-        ? '共通仕様書と3つの画像生成プロンプトを作成しました。STEP 1から順番に使用してください。'
-        : 'プロンプトを生成しました。右側で確認・編集できます。';
+      elements.status.textContent = getGenerationSuccessMessage();
 
       return {
         status: 'generated',
@@ -559,6 +564,14 @@ function updateResultMode() {
   elements.resultPanel?.classList.toggle('split-mode', splitMode);
 }
 
+function getGenerationSuccessMessage() {
+  if (!isThreePartMode()) return 'プロンプトを生成しました。右側で確認・編集できます。';
+  if (sanitizeText(elements.designLockInput.value)) {
+    return '確定した共通仕様書を埋め込んだ3つの画像生成プロンプトを作成しました。';
+  }
+  return 'STEP 1のプロンプトを作成しました。ChatGPTの返答を共通仕様書欄へ貼り付けて反映してください。';
+}
+
 function handleChipClick(event) {
   const chip = event.currentTarget;
   const value = chip.dataset.value;
@@ -604,9 +617,7 @@ function handleGenerate(event) {
     const prompt = buildPrompt();
     renderPromptResult(prompt);
     elements.status.className = 'form-status success';
-    elements.status.textContent = isThreePartMode()
-      ? '共通仕様書と3つの画像生成プロンプトを作成しました。STEP 1から順番に使用してください。'
-      : 'プロンプトを生成しました。右側で確認・編集できます。';
+    elements.status.textContent = getGenerationSuccessMessage();
 
     if (window.matchMedia('(max-width: 980px)').matches) {
       document.getElementById('result-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -732,6 +743,7 @@ function getGenerationContext() {
     avoid: sanitizeText(elements.avoid.value),
     request: sanitizeText(elements.request.value),
     mockupScope: elements.mockupScope.value,
+    designLock: sanitizeText(elements.designLockInput.value),
   };
 }
 
@@ -750,6 +762,7 @@ function buildGuidedPromptSet(context) {
   ];
 
   const prompts = buildGuidedPromptParts(context);
+  const availableParts = context.designLock ? parts : parts.slice(0, 1);
 
   return [
     '# Website UI Mockup Guided Prompt Set',
@@ -757,21 +770,27 @@ function buildGuidedPromptSet(context) {
     '以下の4本を、同じChatGPTチャットでSTEP 1から順番に1本ずつ使用してください。',
     '最初に共通デザイン仕様書を確定し、その仕様書と先に生成した画像を基準に3分割の画像を生成してください。',
     '',
-    ...parts.flatMap((part, index) => [
+    ...availableParts.flatMap((part, index) => [
       `================ ${part.title} ================`,
       '',
       prompts[part.key],
-      ...(index < parts.length - 1 ? ['', ''] : []),
+      ...(index < availableParts.length - 1 ? ['', ''] : []),
     ]),
+    ...(!context.designLock ? [
+      '',
+      'STEP 1で作成された共通デザイン仕様書をBuilderの仕様書欄へ貼り付け、再生成してください。',
+      '仕様書が埋め込まれるまで、3つの画像生成プロンプトは確定しません。',
+    ] : []),
   ].join('\n');
 }
 
 function buildGuidedPromptParts(context = getGenerationContext()) {
+  const hasDesignLock = Boolean(context.designLock);
   return {
     spec: buildCommonDesignSpecificationPrompt(context),
-    top: buildGuidedPartImagePrompt(context, 'top'),
-    middle: buildGuidedPartImagePrompt(context, 'middle'),
-    bottom: buildGuidedPartImagePrompt(context, 'bottom'),
+    top: hasDesignLock ? buildGuidedPartImagePrompt(context, 'top') : '',
+    middle: hasDesignLock ? buildGuidedPartImagePrompt(context, 'middle') : '',
+    bottom: hasDesignLock ? buildGuidedPartImagePrompt(context, 'bottom') : '',
   };
 }
 
@@ -824,7 +843,8 @@ function buildCommonDesignSpecificationPrompt(context) {
     '- 仕様書内で矛盾が生じる場合は、サイトの目的、業種としての適切性、可読性、ユーザー指定の順に調整する。',
     '',
     '## Output',
-    '見出しを「# Common Design Specification — Design Lock v1」とし、仕様書本文だけを出力してください。画像やモックアップは生成しないでください。',
+    '見出しを「# Common Design Specification — Design Lock v1」とし、仕様書本文だけを2,000文字以内で出力してください。画像やモックアップは生成しないでください。',
+    '説明的な理由や複数案を省き、各トークンの具体値と使用規則を短く再利用しやすい形式でまとめてください。',
     '出力した仕様書を、このチャットで続けて行う3枚の画像生成における固定ルールとして保持してください。',
   ].join('\n');
 }
@@ -859,6 +879,12 @@ function buildGuidedPartImagePrompt(context, scopeKey) {
     '## Authoritative Sources',
     ...priorImageRules[scopeKey].map((rule) => `- ${rule}`),
     '- このプロンプトは表示範囲とコンテンツの役割だけを指定する。色やUIルールを新しく選び直さない。',
+    '- 下記のEmbedded Design Lockを会話履歴への参照より優先し、記載された具体値をこの画像でも直接適用する。',
+    '',
+    '## Embedded Design Lock — Verbatim',
+    '<design_lock>',
+    context.designLock,
+    '</design_lock>',
     '',
     '## Purpose and Audience',
     `- 主な目的：${context.goal.label}。${context.goal.text}`,
@@ -876,14 +902,21 @@ function buildGuidedPartImagePrompt(context, scopeKey) {
     '- 各セクションに異なる役割と構図を持たせ、同じカードレイアウトを反復しない。',
     '',
     '## Rendering Priorities',
-    '1. 共通仕様書と先行画像のデザインを維持する',
-    '2. 余白のリズムと読みやすい文字サイズを保つ',
-    '3. 指定範囲の情報階層とセクション構成を表現する',
-    '4. 補助的な文章や要素を収める',
+    '1. Embedded Design Lockの具体的な色・寸法・UIルールをそのまま維持する',
+    '2. 先行画像の構図、写真表現、視覚的な雰囲気を維持する',
+    '3. 余白のリズムと読みやすい文字サイズを保つ',
+    '4. 指定範囲の情報階層とセクション構成を表現する',
+    '5. 補助的な文章や要素を収める',
     '- キャンバスに収まらない場合は、余白や文字を縮小せず、優先度の低い文章・カードを省略する。',
     '- 日本語の本文は1ブロック2〜3行を目安とし、意味不明な文字列やLorem ipsumを使わない。',
     '- 根拠のない実績値、受賞歴、顧客ロゴ、評価、人物名を追加しない。',
     '- 新しいデザイン案として作り直さず、今回指定した表示範囲だけを生成する。',
+    '- Embedded Design Lockにない新しい色相、グラデーション、影、角丸、装飾スタイルを追加しない。',
+    '',
+    '## Preflight Check',
+    '- 生成前に、Color tokensのPrimary、Accent、Background、Surface、Text、Borderを抽出し、それぞれ指定用途に使っているか内部確認する。',
+    '- 特にAccentが下部で消失したり、Primaryが別の青・緑へ変化したりしていないことを確認する。',
+    '- 共通仕様書と異なる色を検出した場合は、画像を出力する前に仕様書の値へ戻す。',
     '',
     '## Output',
     `共通仕様書と参照画像を継承した「${scope.label}」のモックアップ画像を1枚、直接生成してください。条件が揃っている場合、説明やデザイン解説は不要です。`,
@@ -1098,6 +1131,40 @@ async function copyTextArea(output, label) {
   }
 }
 
+function handleDesignLockInput() {
+  const hadGeneratedParts = elements.partOutputs.slice(1).some((output) => output.value);
+  elements.partOutputs.slice(1).forEach((output) => { output.value = ''; });
+  elements.applyDesignLockButton.disabled = !sanitizeText(elements.designLockInput.value);
+  if (hadGeneratedParts) {
+    elements.status.className = 'form-status';
+    elements.status.textContent = '共通仕様書が変更されました。もう一度、3つのプロンプトへ反映してください。';
+  }
+  updateOutputState();
+}
+
+function applyDesignLock() {
+  const designLock = sanitizeText(elements.designLockInput.value);
+  if (!designLock) return;
+
+  const invalidFields = [elements.siteType, elements.industry, elements.goal].filter((field) => !field.value);
+  if (invalidFields.length) {
+    elements.status.className = 'form-status';
+    elements.status.textContent = '先に必須項目を選択して、プロンプトを生成してください。';
+    invalidFields[0].focus();
+    return;
+  }
+
+  const prompts = buildGuidedPromptParts();
+  const keys = ['spec', 'top', 'middle', 'bottom'];
+  elements.partOutputs.forEach((output, index) => {
+    if (index === 0 && output.value) return;
+    output.value = prompts[keys[index]];
+  });
+  elements.status.className = 'form-status success';
+  elements.status.textContent = '共通仕様書を上部・中部・下部のプロンプトへ直接埋め込みました。';
+  updateOutputState();
+}
+
 function renderPromptResult(prompt) {
   updateResultMode();
 
@@ -1128,6 +1195,7 @@ function updateOutputState() {
     elements.partCopyButtons[index].disabled = !partHasOutput;
     elements.partCharacterCounts[index].textContent = `${output.value.length.toLocaleString('ja-JP')}文字`;
   });
+  elements.applyDesignLockButton.disabled = !sanitizeText(elements.designLockInput.value);
 }
 
 function clearValidation() {
@@ -1146,6 +1214,8 @@ function handleReset() {
     elements.audienceCustomField.hidden = true;
     elements.output.value = '';
     elements.partOutputs.forEach((output) => { output.value = ''; });
+    elements.designLockInput.value = '';
+    elements.applyDesignLockButton.disabled = true;
     elements.copyLabel.textContent = 'コピー';
     elements.partCopyButtons.forEach((button) => {
       button.querySelector('.part-copy-label').textContent = 'コピー';
