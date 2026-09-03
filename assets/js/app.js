@@ -353,11 +353,17 @@ function init() {
     avoid: document.getElementById('avoid'),
     request: document.getElementById('request'),
     status: document.getElementById('form-status'),
+    resultPanel: document.querySelector('.result-panel'),
+    singleResult: document.getElementById('single-result'),
+    splitResults: document.getElementById('split-results'),
     output: document.getElementById('prompt-output'),
     copyButton: document.getElementById('copy-button'),
     copyLabel: document.getElementById('copy-label'),
     characterCount: document.getElementById('character-count'),
     emptyDecoration: document.getElementById('empty-decoration'),
+    partOutputs: Array.from(document.querySelectorAll('.part-output')),
+    partCopyButtons: Array.from(document.querySelectorAll('.part-copy-button')),
+    partCharacterCounts: Array.from(document.querySelectorAll('.part-character-count')),
   };
 
   if (!elements.form || !elements.output) return;
@@ -366,10 +372,14 @@ function init() {
   elements.form.addEventListener('reset', handleReset);
   elements.audience.addEventListener('change', handleAudienceChange);
   elements.deliverable.addEventListener('change', updateGenerateLabel);
+  elements.mockupScope.addEventListener('change', updateResultMode);
   elements.copyButton.addEventListener('click', handleCopy);
   elements.output.addEventListener('input', updateOutputState);
+  elements.partOutputs.forEach((output) => output.addEventListener('input', updateOutputState));
+  elements.partCopyButtons.forEach((button) => button.addEventListener('click', handlePartCopy));
   elements.chips.forEach((chip) => chip.addEventListener('click', handleChipClick));
   updateGenerateLabel();
+  updateResultMode();
   registerWebMcpTool();
 }
 
@@ -486,15 +496,17 @@ function registerWebMcpTool() {
       elements.impressionCount.textContent = `${selectedImpressions.length} / 3`;
       elements.audienceCustomField.hidden = elements.audience.value !== 'custom';
 
-      elements.output.value = buildPrompt();
+      const prompt = buildPrompt();
+      renderPromptResult(prompt);
       elements.status.className = 'form-status success';
-      elements.status.textContent = 'プロンプトを生成しました。右側で確認・編集できます。';
-      updateOutputState();
+      elements.status.textContent = isThreePartMode()
+        ? '3つのプロンプトを生成しました。上部から順番にコピーして使用できます。'
+        : 'プロンプトを生成しました。右側で確認・編集できます。';
 
       return {
         status: 'generated',
-        characterCount: elements.output.value.length,
-        brief: elements.output.value,
+        characterCount: prompt.length,
+        brief: prompt,
       };
     },
   };
@@ -531,6 +543,20 @@ function handleAudienceChange() {
 function updateGenerateLabel() {
   elements.generateLabel.textContent = generateLabels[elements.deliverable.value] || generateLabels.image;
   elements.mockupScopeField.hidden = elements.deliverable.value !== 'image';
+  updateResultMode();
+}
+
+function isThreePartMode() {
+  return elements.deliverable.value === 'image' && elements.mockupScope.value === 'set';
+}
+
+function updateResultMode() {
+  if (!elements.singleResult || !elements.splitResults) return;
+  const splitMode = isThreePartMode();
+  elements.singleResult.hidden = splitMode;
+  elements.splitResults.hidden = !splitMode;
+  elements.copyButton.hidden = splitMode;
+  elements.resultPanel?.classList.toggle('split-mode', splitMode);
 }
 
 function handleChipClick(event) {
@@ -576,10 +602,11 @@ function handleGenerate(event) {
     }
 
     const prompt = buildPrompt();
-    elements.output.value = prompt;
+    renderPromptResult(prompt);
     elements.status.className = 'form-status success';
-    elements.status.textContent = 'プロンプトを生成しました。右側で確認・編集できます。';
-    updateOutputState();
+    elements.status.textContent = isThreePartMode()
+      ? '3つのプロンプトを生成しました。上部から順番にコピーして使用できます。'
+      : 'プロンプトを生成しました。右側で確認・編集できます。';
 
     if (window.matchMedia('(max-width: 980px)').matches) {
       document.getElementById('result-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -721,6 +748,8 @@ function buildThreePartPromptSet(context) {
     { key: 'bottom', title: 'PROMPT 3 / ページ下部' },
   ];
 
+  const prompts = buildThreePartPromptParts(context);
+
   return [
     '# Website UI Mockup Image Prompt Set',
     '',
@@ -730,10 +759,18 @@ function buildThreePartPromptSet(context) {
     ...parts.flatMap((part, index) => [
       `================ ${part.title} ================`,
       '',
-      buildSingleImageMockupPrompt(context, part.key),
+      prompts[part.key],
       ...(index < parts.length - 1 ? ['', ''] : []),
     ]),
   ].join('\n');
+}
+
+function buildThreePartPromptParts(context = getGenerationContext()) {
+  return {
+    top: buildSingleImageMockupPrompt(context, 'top'),
+    middle: buildSingleImageMockupPrompt(context, 'middle'),
+    bottom: buildSingleImageMockupPrompt(context, 'bottom'),
+  };
 }
 
 function buildSingleImageMockupPrompt(context, scopeKey) {
@@ -910,34 +947,70 @@ function sanitizeText(value) {
 }
 
 async function handleCopy() {
-  const text = elements.output.value;
+  await copyTextArea(elements.output, elements.copyLabel);
+}
+
+async function handlePartCopy(event) {
+  const button = event.currentTarget;
+  const output = document.getElementById(button.dataset.target);
+  const label = button.querySelector('.part-copy-label');
+  await copyTextArea(output, label);
+}
+
+async function copyTextArea(output, label) {
+  const text = output.value;
   if (!text) return;
 
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
     } else {
-      elements.output.focus();
-      elements.output.select();
+      output.focus();
+      output.select();
       const copied = document.execCommand('copy');
       if (!copied) throw new Error('Fallback copy failed');
-      elements.output.setSelectionRange(0, 0);
+      output.setSelectionRange(0, 0);
     }
-    elements.copyLabel.textContent = 'コピー済み';
-    window.setTimeout(() => { elements.copyLabel.textContent = 'コピー'; }, 1800);
+    label.textContent = 'コピー済み';
+    window.setTimeout(() => { label.textContent = 'コピー'; }, 1800);
   } catch (error) {
     console.error('Copy failed:', error);
-    elements.copyLabel.textContent = '選択してコピー';
-    elements.output.focus();
-    elements.output.select();
+    label.textContent = '選択してコピー';
+    output.focus();
+    output.select();
   }
 }
 
+function renderPromptResult(prompt) {
+  updateResultMode();
+
+  if (isThreePartMode()) {
+    const prompts = buildThreePartPromptParts();
+    const keys = ['top', 'middle', 'bottom'];
+    elements.partOutputs.forEach((output, index) => {
+      output.value = prompts[keys[index]];
+    });
+    elements.output.value = '';
+  } else {
+    elements.output.value = prompt;
+    elements.partOutputs.forEach((output) => { output.value = ''; });
+  }
+
+  updateOutputState();
+}
+
 function updateOutputState() {
+  updateResultMode();
   const hasOutput = elements.output.value.length > 0;
   elements.copyButton.disabled = !hasOutput;
   elements.emptyDecoration.hidden = hasOutput;
   elements.characterCount.textContent = `${elements.output.value.length.toLocaleString('ja-JP')}文字`;
+
+  elements.partOutputs.forEach((output, index) => {
+    const partHasOutput = output.value.length > 0;
+    elements.partCopyButtons[index].disabled = !partHasOutput;
+    elements.partCharacterCounts[index].textContent = `${output.value.length.toLocaleString('ja-JP')}文字`;
+  });
 }
 
 function clearValidation() {
@@ -955,7 +1028,11 @@ function handleReset() {
     elements.impressionMessage.textContent = '';
     elements.audienceCustomField.hidden = true;
     elements.output.value = '';
+    elements.partOutputs.forEach((output) => { output.value = ''; });
     elements.copyLabel.textContent = 'コピー';
+    elements.partCopyButtons.forEach((button) => {
+      button.querySelector('.part-copy-label').textContent = 'コピー';
+    });
     updateGenerateLabel();
     clearValidation();
     updateOutputState();

@@ -530,6 +530,11 @@ summary:focus-visible {
   min-height: 58px;
 }
 
+.result-panel.split-mode {
+  position: static;
+  min-height: auto;
+}
+
 .result-wrap {
   position: relative;
   display: flex;
@@ -537,7 +542,7 @@ summary:focus-visible {
   min-height: 560px;
 }
 
-#prompt-output {
+.prompt-output {
   position: relative;
   z-index: 1;
   min-height: 560px;
@@ -551,9 +556,58 @@ summary:focus-visible {
   resize: none;
 }
 
-#prompt-output:placeholder-shown {
+.prompt-output:placeholder-shown {
   color: transparent;
   background: rgb(255 254 251 / 48%);
+}
+
+.split-results {
+  display: grid;
+  gap: 32px;
+}
+
+.split-result {
+  padding-top: 22px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.split-result:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.split-result-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.split-result-heading h3 {
+  margin: 2px 0 0;
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.part-label {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.part-output {
+  display: block;
+  width: 100%;
+  min-height: 390px;
+  resize: vertical;
+}
+
+.part-output:placeholder-shown {
+  color: var(--ink-soft);
 }
 
 .empty-decoration {
@@ -628,8 +682,12 @@ summary:focus-visible {
   }
 
   .result-wrap,
-  #prompt-output {
+  .prompt-output {
     min-height: 520px;
+  }
+
+  .part-output {
+    min-height: 390px;
   }
 }
 
@@ -703,13 +761,17 @@ summary:focus-visible {
   }
 
   .result-wrap,
-  #prompt-output {
+  .prompt-output {
     min-height: 460px;
   }
 
-  #prompt-output {
+  .prompt-output {
     padding: 18px;
     font-size: 0.8rem;
+  }
+
+  .part-output {
+    min-height: 340px;
   }
 
   .site-footer {
