@@ -150,6 +150,11 @@ const generateLabels = {
 };
 
 const mockupScopes = {
+  set: {
+    label: '上部・中部・下部の3分割セット',
+    framing: [],
+    indices: [],
+  },
   key: {
     label: 'ファーストビュー＋主要セクション',
     framing: [
@@ -443,7 +448,7 @@ function registerWebMcpTool() {
         audience: validOptional(input.audience, allowedValues.audience, 'auto'),
         audienceDetail: stringValue(input.audienceDetail, 120),
         deliverable: validOptional(input.deliverable, allowedValues.deliverable, 'image'),
-        mockupScope: validOptional(input.mockupScope, allowedValues.mockupScope, 'key'),
+        mockupScope: validOptional(input.mockupScope, allowedValues.mockupScope, 'set'),
         color: validOptional(input.color, allowedValues.color, 'auto'),
         style: validOptional(input.style, allowedValues.style, 'auto'),
         spacing: validOptional(input.spacing, allowedValues.spacing, 'auto'),
@@ -705,10 +710,37 @@ function getGenerationContext() {
 
 function buildImageMockupPrompt() {
   const context = getGenerationContext();
-  const scope = mockupScopes[context.mockupScope] || mockupScopes.key;
+  if (context.mockupScope === 'set') return buildThreePartPromptSet(context);
+  return buildSingleImageMockupPrompt(context, context.mockupScope);
+}
+
+function buildThreePartPromptSet(context) {
+  const parts = [
+    { key: 'top', title: 'PROMPT 1 / ページ上部' },
+    { key: 'middle', title: 'PROMPT 2 / ページ中部' },
+    { key: 'bottom', title: 'PROMPT 3 / ページ下部' },
+  ];
+
+  return [
+    '# Website UI Mockup Image Prompt Set',
+    '',
+    '以下の3本を、同じChatGPTチャットで上から順番に1本ずつ使用してください。',
+    '一度に3枚を生成させず、各画像を確認してから次のプロンプトへ進んでください。',
+    '',
+    ...parts.flatMap((part, index) => [
+      `================ ${part.title} ================`,
+      '',
+      buildSingleImageMockupPrompt(context, part.key),
+      ...(index < parts.length - 1 ? ['', ''] : []),
+    ]),
+  ].join('\n');
+}
+
+function buildSingleImageMockupPrompt(context, scopeKey) {
+  const scope = mockupScopes[scopeKey] || mockupScopes.key;
   const allSections = pageStructures[context.siteKey] || pageStructures.other;
   const scopedSections = scope.indices.map((index) => allSections[index]);
-  const needsReference = ['middle', 'bottom'].includes(context.mockupScope);
+  const continuityRules = getContinuityRules(scopeKey);
   const concept = context.impressionNames.length
     ? `「${context.impressionNames.join('・')}」を軸にする。`
     : '業種・目的・想定ユーザーに適した視覚的な個性を判断する。';
@@ -731,12 +763,10 @@ function buildImageMockupPrompt() {
     '- PC、スマートフォン、ブラウザなどのデバイス枠には入れない。',
     '- プレゼンテーションボード、注釈、カラーパレット見本、周囲の装飾を付けない。',
     '- 画像全体をWebサイトのUIだけで構成する。',
-    ...(needsReference ? [
+    ...(continuityRules.length ? [
       '',
       '## Reference Continuity',
-      '- 先に生成した同一サイトの画像が添付されている場合は、それをデザインシステムの参照画像として扱う。',
-      '- 参照画像の配色、タイポグラフィ、グリッド、余白のリズム、ボタン、写真のトーンを維持し、別のサイトへ再設計しない。',
-      '- 変更・追加するのは今回指定した表示範囲だけとし、それ以外のデザイン規則は保つ。',
+      ...continuityRules.map((rule) => `- ${rule}`),
     ] : []),
     '',
     '## Page Architecture',
@@ -780,6 +810,26 @@ function buildImageMockupPrompt() {
     '## Output',
     `「${scope.label}」の範囲だけを対象として、上記を満たすWebサイトのモックアップ画像を1枚、直接生成してください。生成前の説明、デザイン解説、箇条書きの回答は不要です。`,
   ].join('\n');
+}
+
+function getContinuityRules(scopeKey) {
+  if (scopeKey === 'middle') {
+    return [
+      'このチャットで直前に生成した「ページ上部」の画像を、デザインシステムの参照画像として扱う。',
+      '上部画像の配色、タイポグラフィ、コンテンツ幅、グリッド、余白のリズム、ボタン、罫線、角丸、写真のトーンを維持する。',
+      '新しいデザイン案として作り直さず、同一Webサイトの自然な続きとしてページ中部だけを生成する。',
+    ];
+  }
+
+  if (scopeKey === 'bottom') {
+    return [
+      'このチャットでこれまでに生成した「ページ上部」と「ページ中部」の画像を、デザインシステムの参照画像として扱う。',
+      '確立済みの配色、タイポグラフィ、コンテンツ幅、グリッド、余白のリズム、ボタン、罫線、角丸、写真のトーンを変更しない。',
+      '新しいデザイン案として作り直さず、同一Webサイトの自然な続きとしてページ下部だけを生成する。',
+    ];
+  }
+
+  return [];
 }
 
 function buildPrototypePrompt() {
