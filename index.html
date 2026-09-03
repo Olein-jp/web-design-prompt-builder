@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="少ない選択から、生成AIに渡せる質の高いWebデザイン用プロンプトを作成します。"
+    />
+    <meta name="theme-color" content="#17243d" />
+    <title>Web Design Prompt Builder</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2317243d'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Georgia,serif' font-size='38' fill='white'%3EW%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="assets/css/style.css?v=5" />
+  </head>
+  <body>
+    <a class="skip-link" href="#builder">入力フォームへ移動</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand" aria-label="Web Design Prompt Builder">
+          <span class="brand-mark" aria-hidden="true">W</span>
+          <span>Web Design Prompt Builder</span>
+        </div>
+        <p class="header-note">ブラウザ内で生成・外部送信なし</p>
+      </div>
+    </header>
+
+    <main class="page-shell" id="builder">
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">DESIGN DIRECTION, SIMPLIFIED</p>
+        <h1 id="page-title">
+          <span>少ない選択で、</span>
+          <span>質の高いデザイン指示を。</span>
+        </h1>
+        <p class="intro-copy">
+          サイトの種類や目的を選ぶだけで、デザインモックアップ画像を生成するためのプロンプトを組み立てます。
+          専門的な指定は、業種と目的に合わせて補完します。
+        </p>
+      </section>
+
+      <div class="workspace">
+        <section class="panel input-panel" aria-labelledby="input-title">
+          <div class="panel-heading">
+            <div>
+              <p class="step-label">01 / INPUT</p>
+              <h2 id="input-title">デザインの条件</h2>
+            </div>
+            <p class="required-note"><span aria-hidden="true">＊</span> 必須項目</p>
+          </div>
+
+          <form id="prompt-form" novalidate>
+            <div class="field-grid two-columns">
+              <div class="field">
+                <label for="site-type">サイト種別 <span class="required">＊</span></label>
+                <select id="site-type" name="siteType" required>
+                  <option value="">選択してください</option>
+                  <option value="corporate">コーポレートサイト</option>
+                  <option value="service">サービスサイト</option>
+                  <option value="landing">ランディングページ</option>
+                  <option value="shop">店舗・施設サイト</option>
+                  <option value="recruitment">採用サイト</option>
+                  <option value="portfolio">ポートフォリオ</option>
+                  <option value="ecommerce">ECサイト</option>
+                  <option value="media">メディア・ブログ</option>
+                  <option value="event">イベントサイト</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="industry">業種 <span class="required">＊</span></label>
+                <select id="industry" name="industry" required>
+                  <option value="">選択してください</option>
+                  <option value="professional">士業・専門サービス</option>
+                  <option value="it">IT・テクノロジー</option>
+                  <option value="construction">建築・建設・不動産</option>
+                  <option value="manufacturing">製造業</option>
+                  <option value="medical">医療・福祉</option>
+                  <option value="beauty">美容・ウェルネス</option>
+                  <option value="restaurant">飲食・食品</option>
+                  <option value="education">教育・スクール</option>
+                  <option value="retail">小売・店舗</option>
+                  <option value="finance">金融・保険</option>
+                  <option value="creative">デザイン・クリエイティブ</option>
+                  <option value="nonprofit">公共・団体・NPO</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="industry-detail">具体的な業種・サービス名 <span class="optional">任意</span></label>
+              <input
+                id="industry-detail"
+                name="industryDetail"
+                type="text"
+                placeholder="例：注文住宅の設計事務所"
+                maxlength="100"
+              />
+            </div>
+
+            <div class="field-grid two-columns">
+              <div class="field">
+                <label for="goal">主な目的 <span class="required">＊</span></label>
+                <select id="goal" name="goal" required>
+                  <option value="">選択してください</option>
+                  <option value="trust">信頼してもらいたい</option>
+                  <option value="inquiry">問い合わせを増やしたい</option>
+                  <option value="understand">商品・サービスを理解してもらいたい</option>
+                  <option value="branding">ブランドイメージを伝えたい</option>
+                  <option value="recruitment">採用につなげたい</option>
+                  <option value="purchase">商品を購入してもらいたい</option>
+                  <option value="visit">店舗・施設へ来てもらいたい</option>
+                  <option value="reservation">予約につなげたい</option>
+                  <option value="reading">コンテンツを読んでもらいたい</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="audience">想定ユーザー</label>
+                <select id="audience" name="audience">
+                  <option value="auto">おまかせ</option>
+                  <option value="business">法人・担当者</option>
+                  <option value="consumer">一般消費者</option>
+                  <option value="owner">経営者・事業主</option>
+                  <option value="family">家族・保護者</option>
+                  <option value="jobseeker">求職者</option>
+                  <option value="custom">自由入力</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field" id="audience-custom-field" hidden>
+              <label for="audience-detail">想定ユーザーを具体的に入力</label>
+              <input
+                id="audience-detail"
+                name="audienceDetail"
+                type="text"
+                placeholder="例：店舗開業を検討している個人事業主"
+                maxlength="120"
+              />
+            </div>
+
+            <div class="field-grid two-columns">
+              <div class="field">
+                <label for="deliverable">生成プロンプトの用途</label>
+                <select id="deliverable" name="deliverable">
+                  <option value="image">モックアップ画像（おすすめ）</option>
+                  <option value="brief">デザイン方針・ページ構成</option>
+                  <option value="prototype">HTML/CSSプロトタイプ</option>
+                </select>
+                <p class="field-hint">構成検討や実装用の指示にも切り替えられます。</p>
+              </div>
+
+              <div class="field" id="mockup-scope-field">
+                <label for="mockup-scope">画像に含める範囲</label>
+                <select id="mockup-scope" name="mockupScope">
+                  <option value="key">ファーストビュー＋主要セクション（おすすめ）</option>
+                  <option value="hero">ファーストビューのみ</option>
+                  <option value="full">フルページ概要</option>
+                  <option value="top">ページ上部</option>
+                  <option value="middle">ページ中部</option>
+                  <option value="bottom">ページ下部</option>
+                </select>
+                <p class="field-hint">範囲を絞るほど、余白や文字サイズを保ちやすくなります。</p>
+              </div>
+            </div>
+
+            <fieldset class="field impression-field">
+              <div class="legend-row">
+                <legend>与えたい印象 <span class="optional">最大3つ・任意</span></legend>
+                <span id="impression-count" class="selection-count" aria-live="polite">0 / 3</span>
+              </div>
+              <div class="chip-group" id="impression-chips">
+                <button type="button" class="chip" data-value="trust" aria-pressed="false">信頼感</button>
+                <button type="button" class="chip" data-value="sincere" aria-pressed="false">誠実</button>
+                <button type="button" class="chip" data-value="friendly" aria-pressed="false">親しみ</button>
+                <button type="button" class="chip" data-value="calm" aria-pressed="false">落ち着き</button>
+                <button type="button" class="chip" data-value="intelligent" aria-pressed="false">知的</button>
+                <button type="button" class="chip" data-value="sophisticated" aria-pressed="false">洗練</button>
+                <button type="button" class="chip" data-value="luxury" aria-pressed="false">高級感</button>
+                <button type="button" class="chip" data-value="innovative" aria-pressed="false">先進的</button>
+                <button type="button" class="chip" data-value="active" aria-pressed="false">活発</button>
+                <button type="button" class="chip" data-value="strong" aria-pressed="false">力強い</button>
+                <button type="button" class="chip" data-value="soft" aria-pressed="false">やわらかい</button>
+                <button type="button" class="chip" data-value="natural" aria-pressed="false">ナチュラル</button>
+                <button type="button" class="chip" data-value="minimal" aria-pressed="false">ミニマル</button>
+                <button type="button" class="chip" data-value="elegant" aria-pressed="false">エレガント</button>
+                <button type="button" class="chip" data-value="unique" aria-pressed="false">個性的</button>
+              </div>
+              <p class="field-message" id="impression-message" aria-live="polite"></p>
+            </fieldset>
+
+            <details class="advanced-settings">
+              <summary>
+                <span class="summary-icon" aria-hidden="true"></span>
+                もっと詳しく指定する
+              </summary>
+              <div class="advanced-body">
+                <div class="field-grid two-columns">
+                  <div class="field">
+                    <label for="color">配色</label>
+                    <select id="color" name="color">
+                      <option value="auto">おまかせ</option>
+                      <option value="navy">ネイビー系</option>
+                      <option value="monochrome">モノクロ</option>
+                      <option value="warm">暖色系</option>
+                      <option value="cool">寒色系</option>
+                      <option value="earth">アースカラー</option>
+                      <option value="vivid">鮮やか</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="style">デザインスタイル</label>
+                    <select id="style" name="style">
+                      <option value="auto">おまかせ</option>
+                      <option value="minimal">ミニマル</option>
+                      <option value="modern">モダン</option>
+                      <option value="editorial">エディトリアル</option>
+                      <option value="japanese">和モダン</option>
+                      <option value="luxury">ラグジュアリー</option>
+                      <option value="playful">プレイフル</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="spacing">余白の取り方</label>
+                    <select id="spacing" name="spacing">
+                      <option value="auto">おまかせ</option>
+                      <option value="spacious">広め・ゆったり</option>
+                      <option value="balanced">標準・バランス重視</option>
+                      <option value="compact">控えめ・コンパクト</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="visual">写真・ビジュアル</label>
+                    <select id="visual" name="visual">
+                      <option value="auto">おまかせ</option>
+                      <option value="photo">写真中心</option>
+                      <option value="people">人物写真</option>
+                      <option value="product">商品・サービス写真</option>
+                      <option value="illustration">イラスト</option>
+                      <option value="none">写真・イラストなし</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="animation">アニメーション</label>
+                    <select id="animation" name="animation">
+                      <option value="auto">おまかせ</option>
+                      <option value="none">なし</option>
+                      <option value="subtle">控えめ</option>
+                      <option value="interactive">インタラクティブ</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="avoid">避けたい表現 <span class="optional">任意</span></label>
+                  <textarea
+                    id="avoid"
+                    name="avoid"
+                    rows="3"
+                    maxlength="400"
+                    placeholder="例：ポップにしすぎない、写真を暗く加工しない、丸いカードを多用しない"
+                  ></textarea>
+                </div>
+                <div class="field">
+                  <label for="request">自由要望 <span class="optional">任意</span></label>
+                  <textarea
+                    id="request"
+                    name="request"
+                    rows="3"
+                    maxlength="600"
+                    placeholder="例：写真を大きく見せ、オレンジをアクセントカラーに使いたい"
+                  ></textarea>
+                </div>
+              </div>
+            </details>
+
+            <div class="form-status" id="form-status" role="status" aria-live="polite"></div>
+            <div class="form-actions">
+              <button type="submit" class="button button-primary">
+                <span id="generate-label">画像生成用プロンプトを作る</span>
+                <span aria-hidden="true">↗</span>
+              </button>
+              <button type="reset" class="button button-ghost">リセット</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel result-panel" aria-labelledby="result-title">
+          <div class="panel-heading result-heading">
+            <div>
+              <p class="step-label">02 / OUTPUT</p>
+              <h2 id="result-title">生成されたプロンプト</h2>
+            </div>
+            <button type="button" class="copy-button" id="copy-button" disabled>
+              <span class="copy-icon" aria-hidden="true"></span>
+              <span id="copy-label">コピー</span>
+            </button>
+          </div>
+          <div class="result-wrap">
+            <textarea
+              id="prompt-output"
+              aria-label="生成されたプロンプト。内容を編集できます"
+              spellcheck="false"
+              placeholder="左の項目を選んでボタンを押すと、モックアップ画像用のプロンプトが表示されます。生成後は自由に編集できます。"
+            ></textarea>
+            <div class="empty-decoration" id="empty-decoration" aria-hidden="true">
+              <span>BRIEF</span>
+              <i></i>
+              <i></i>
+              <i></i>
+            </div>
+          </div>
+          <div class="result-footer">
+            <p id="character-count">0文字</p>
+            <p>生成後も編集できます</p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <p>Web Design Prompt Builder</p>
+      <p>入力内容は外部へ送信されません。</p>
+    </footer>
+
+    <script src="assets/js/app.js?v=5" defer></script>
+  </body>
+</html>
