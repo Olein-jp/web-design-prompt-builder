@@ -13,7 +13,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%2317243d'/%3E%3Ctext x='32' y='44' text-anchor='middle' font-family='Georgia,serif' font-size='38' fill='white'%3EW%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="assets/css/style.css?v=10" />
+    <link rel="stylesheet" href="assets/css/style.css?v=11" />
   </head>
   <body>
     <a class="skip-link" href="#builder">入力フォームへ移動</a>
@@ -200,6 +200,7 @@
                     <option value="recruitment">採用情報</option>
                     <option value="faq">よくある質問</option>
                     <option value="contact">お問い合わせ</option>
+                    <option value="menu">メニュー・商品一覧</option>
                     <option value="other">その他</option>
                   </select>
                 </div>
@@ -427,10 +428,27 @@
                 rows="7"
                 maxlength="20000"
                 spellcheck="false"
-                placeholder="「# Common Design Specification — Design Lock v1」から始まる仕様書を貼り付けてください。"
+                placeholder="「# 共通デザイン仕様書 — Design Lock v1」から始まる仕様書を貼り付けてください。従来の英語見出しの仕様書も利用できます。"
               ></textarea>
               <button type="button" class="button apply-lock-button" id="apply-design-lock" disabled>
                 <span id="apply-design-lock-label">仕様書を3つのプロンプトへ反映</span>
+              </button>
+            </div>
+
+            <div class="design-lock-capture" id="page-blueprint-capture" hidden>
+              <label for="page-blueprint-input">ChatGPTが作成した下層ページ構成表</label>
+              <p id="page-blueprint-help">
+                構成表作成用プロンプトの返答を貼り付けてください。各セクションの担当範囲を画像生成プロンプトへ固定します。
+              </p>
+              <textarea
+                id="page-blueprint-input"
+                rows="7"
+                maxlength="20000"
+                spellcheck="false"
+                placeholder="「# 下層ページ構成表 — Page Blueprint v1」から始まる構成表を貼り付けてください。"
+              ></textarea>
+              <button type="button" class="button apply-lock-button" id="apply-page-blueprint" disabled>
+                <span id="apply-page-blueprint-label">構成表を画像プロンプトへ反映</span>
               </button>
             </div>
 
@@ -515,6 +533,6 @@
       <p>入力内容は外部へ送信されません。</p>
     </footer>
 
-    <script src="assets/js/app.js?v=10" defer></script>
+    <script src="assets/js/app.js?v=11" defer></script>
   </body>
 </html>

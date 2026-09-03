@@ -249,6 +249,10 @@ const subpageTypes = {
     label: 'お問い合わせ',
     sections: ['ページタイトルと問い合わせ前の案内', '問い合わせ方法・対応範囲・目安', '入力フォームと必要項目', '個人情報・送信前確認・補足事項', '送信CTAと代替連絡手段'],
   },
+  menu: {
+    label: 'メニュー・商品一覧',
+    sections: ['ページタイトルとメニュー全体の案内', 'メニューカテゴリーと掲載対象の確定', 'カテゴリーごとの商品・料理・価格・説明', 'おすすめの選び方や素材・提供条件', '来店・予約・関連情報への導線'],
+  },
   other: {
     label: 'その他の下層ページ',
     sections: ['パンくずとページタイトル', 'このページで伝える中心情報', '理解・比較・判断に必要な具体情報', '不安や疑問を解消する補足', '関連ページと主要CTA'],
@@ -434,6 +438,12 @@ function init() {
     applyDesignLockButton: document.getElementById('apply-design-lock'),
     applyDesignLockLabel: document.getElementById('apply-design-lock-label'),
     designLockHelp: document.getElementById('design-lock-help'),
+    designLockCapture: document.getElementById('design-lock-capture'),
+    pageBlueprintCapture: document.getElementById('page-blueprint-capture'),
+    pageBlueprintInput: document.getElementById('page-blueprint-input'),
+    pageBlueprintHelp: document.getElementById('page-blueprint-help'),
+    applyPageBlueprintButton: document.getElementById('apply-page-blueprint'),
+    applyPageBlueprintLabel: document.getElementById('apply-page-blueprint-label'),
     partCards: ['spec', 'top', 'middle', 'bottom'].map((key) => document.getElementById(`part-card-${key}`)),
     partLabels: ['spec', 'top', 'middle', 'bottom'].map((key) => document.getElementById(`part-label-${key}`)),
     partTitles: ['spec', 'top', 'middle', 'bottom'].map((key) => document.getElementById(`part-title-${key}`)),
@@ -449,12 +459,16 @@ function init() {
   elements.productionMode.addEventListener('change', handleProductionModeChange);
   elements.mockupScope.addEventListener('change', updateResultMode);
   elements.subpageLength.addEventListener('change', handleSubpageLengthChange);
+  [elements.subpageType, elements.subpageName, elements.subpagePurpose, elements.subpageContent, elements.subpageCta]
+    .forEach((field) => field.addEventListener(field.tagName === 'SELECT' ? 'change' : 'input', handleSubpageDefinitionChange));
   elements.copyButton.addEventListener('click', handleCopy);
   elements.output.addEventListener('input', updateOutputState);
   elements.partOutputs.forEach((output) => output.addEventListener('input', updateOutputState));
   elements.partCopyButtons.forEach((button) => button.addEventListener('click', handlePartCopy));
   elements.designLockInput.addEventListener('input', handleDesignLockInput);
   elements.applyDesignLockButton.addEventListener('click', applyDesignLock);
+  elements.pageBlueprintInput.addEventListener('input', handlePageBlueprintInput);
+  elements.applyPageBlueprintButton.addEventListener('click', applyPageBlueprint);
   elements.chips.forEach((chip) => chip.addEventListener('click', handleChipClick));
   updateGenerateLabel();
   updateResultMode();
@@ -521,6 +535,7 @@ function registerWebMcpTool() {
         avoid: { type: 'string', maxLength: 400, description: '避けたいデザイン表現や見せ方' },
         request: { type: 'string', maxLength: 600, description: '自由要望' },
         designLock: { type: 'string', maxLength: 20000, description: 'ChatGPTで確定した共通デザイン仕様書' },
+        pageBlueprint: { type: 'string', maxLength: 20000, description: 'ChatGPTで確定した下層ページ構成表' },
       },
       required: ['siteType', 'industry', 'goal'],
       additionalProperties: false,
@@ -563,6 +578,7 @@ function registerWebMcpTool() {
         avoid: stringValue(input.avoid, 400),
         request: stringValue(input.request, 600),
         designLock: stringValue(input.designLock, 20000),
+        pageBlueprint: stringValue(input.pageBlueprint, 20000),
       };
 
       if (nextValues.audience === 'custom' && !nextValues.audienceDetail.trim()) {
@@ -593,6 +609,7 @@ function registerWebMcpTool() {
       elements.avoid.value = nextValues.avoid;
       elements.request.value = nextValues.request;
       elements.designLockInput.value = nextValues.designLock;
+      elements.pageBlueprintInput.value = nextValues.pageBlueprint;
 
       selectedImpressions = [...impressionValues];
       elements.chips.forEach((chip) => {
@@ -669,9 +686,27 @@ function handleProductionModeChange() {
 
 function handleSubpageLengthChange() {
   const designLock = sanitizeText(elements.designLockInput.value);
+  const hadBlueprint = Boolean(sanitizeText(elements.pageBlueprintInput.value));
+  elements.pageBlueprintInput.value = '';
   const prompts = designLock ? buildSubpagePromptParts() : { spec: '', top: '', middle: '', bottom: '' };
   const keys = ['spec', 'top', 'middle', 'bottom'];
   elements.partOutputs.forEach((output, index) => { output.value = prompts[keys[index]]; });
+  if (hadBlueprint) {
+    elements.status.className = 'form-status';
+    elements.status.textContent = '画像の分割数が変更されました。新しい分割に合わせて構成表を作り直してください。';
+  }
+  updateOutputState();
+}
+
+function handleSubpageDefinitionChange() {
+  const hadBlueprint = Boolean(sanitizeText(elements.pageBlueprintInput.value));
+  elements.pageBlueprintInput.value = '';
+  elements.partOutputs.forEach((output) => { output.value = ''; });
+  elements.applyPageBlueprintButton.disabled = true;
+  if (hadBlueprint) {
+    elements.status.className = 'form-status';
+    elements.status.textContent = '下層ページの条件が変更されました。構成表を作り直してください。';
+  }
   updateOutputState();
 }
 
@@ -699,6 +734,11 @@ function updateResultMode() {
 
 function configureGuidedOutputCards() {
   if (isTopGuidedMode()) {
+    elements.workflowNote.style.order = '1';
+    elements.partCards[0].style.order = '2';
+    elements.designLockCapture.style.order = '3';
+    elements.pageBlueprintCapture.hidden = true;
+    elements.partCards.slice(1).forEach((card, index) => { card.style.order = String(index + 4); });
     elements.workflowNote.textContent = '同じChatGPTチャットで、STEP 1から順番に使用してください。最初に共通仕様書を確定すると、3枚のデザインを揃えやすくなります。';
     elements.designLockHelp.textContent = 'STEP 1の返答を貼り付けて反映してください。確定したカラーコードなどを、以降の3つのプロンプトへ直接埋め込みます。';
     elements.applyDesignLockLabel.textContent = '仕様書を3つのプロンプトへ反映';
@@ -713,16 +753,23 @@ function configureGuidedOutputCards() {
   }
 
   const segmentKeys = subpageLengths[elements.subpageLength.value] || subpageLengths.three;
-  elements.workflowNote.textContent = 'トップページを生成した同じChatGPTチャットで、確定済みの共通デザイン仕様書とトップページ画像を参照させてください。下層ページ固有の情報設計だけを変更します。';
-  elements.designLockHelp.textContent = 'トップページ制作時に確定した「Common Design Specification — Design Lock v1」を貼り付けてください。各下層ページプロンプトへ全文を直接埋め込みます。';
-  elements.applyDesignLockLabel.textContent = `仕様書を${segmentKeys.length}つのプロンプトへ反映`;
-  setPartCard(0, false);
+  elements.workflowNote.style.order = '1';
+  elements.designLockCapture.style.order = '2';
+  elements.partCards[0].style.order = '3';
+  elements.pageBlueprintCapture.style.order = '4';
+  elements.pageBlueprintCapture.hidden = false;
+  elements.partCards.slice(1).forEach((card, index) => { card.style.order = String(index + 5); });
+  elements.workflowNote.textContent = '同じChatGPTチャットで、①共通デザイン仕様書を反映、②下層ページ構成表を作成・反映、③画像を上から順に生成してください。各セクションは1枚の中で完結させます。';
+  elements.designLockHelp.textContent = 'トップページ制作時に確定した「Design Lock v1」を貼り付けてください。まず下層ページ全体の構成表を作るためのプロンプトへ反映します。';
+  elements.applyDesignLockLabel.textContent = '仕様書を構成表作成プロンプトへ反映';
+  elements.applyPageBlueprintLabel.textContent = `構成表を${segmentKeys.length}つの画像プロンプトへ反映`;
+  setPartCard(0, true, ['STEP 1 / PAGE BLUEPRINT', '下層ページ構成表作成用', '画像生成前に送信してページ全体の構成を確定']);
 
   const labels = {
-    full: ['SUBPAGE / FULL', '下層ページ全体用', '共通仕様書とトップページ画像を参照して使用'],
-    upper: ['SUBPAGE 1 / UPPER', '下層ページ上部用', '最初に生成'],
-    middle: ['SUBPAGE 2 / MIDDLE', '下層ページ中部用', '上部の生成後に使用'],
-    lower: ['SUBPAGE 3 / LOWER', '下層ページ下部用', '先行画像の生成後に使用'],
+    full: ['STEP 2 / ページ全体', '下層ページ全体用', '構成表の反映後に生成'],
+    upper: ['STEP 2 / ページ上部', '下層ページ上部用', '構成表の反映後、最初に生成'],
+    middle: ['STEP 3 / ページ中部', '下層ページ中部用', '上部の生成後に使用'],
+    lower: [`STEP ${segmentKeys.length + 1} / ページ下部`, '下層ページ下部用', '先行画像の生成後に使用'],
   };
   [1, 2, 3].forEach((cardIndex, segmentIndex) => {
     const key = segmentKeys[segmentIndex];
@@ -742,7 +789,8 @@ function getGenerationSuccessMessage() {
   if (!isGuidedMode()) return 'プロンプトを生成しました。右側で確認・編集できます。';
   if (isSubpageMode()) {
     const count = (subpageLengths[elements.subpageLength.value] || subpageLengths.three).length;
-    if (sanitizeText(elements.designLockInput.value)) return `共通仕様書を全文埋め込んだ下層ページ用プロンプトを${count}つ作成しました。`;
+    if (sanitizeText(elements.designLockInput.value) && sanitizeText(elements.pageBlueprintInput.value)) return `共通仕様書とページ構成表を全文埋め込んだ画像生成プロンプトを${count}つ作成しました。`;
+    if (sanitizeText(elements.designLockInput.value)) return '下層ページ構成表を作成するためのプロンプトを生成しました。ChatGPTの返答を構成表欄へ貼り付けてください。';
     return 'トップページ制作時の共通デザイン仕様書を貼り付けて反映してください。';
   }
   if (sanitizeText(elements.designLockInput.value)) {
@@ -836,7 +884,7 @@ function buildPrompt() {
     : `${industryName}の特性と主な目的から、ふさわしい印象と視覚表現を判断する。`;
 
   const sections = [
-    '# Web Design Brief',
+    '# Webデザイン方針書',
     '',
     '## 制作対象',
     `${industryName}の${site.label}をデザインしてください。`,
@@ -932,6 +980,7 @@ function getGenerationContext() {
     productionMode: elements.productionMode.value,
     mockupScope: elements.mockupScope.value,
     designLock: sanitizeText(elements.designLockInput.value),
+    pageBlueprint: sanitizeText(elements.pageBlueprintInput.value),
     subpageType: elements.subpageType.value,
     subpageName: sanitizeText(elements.subpageName.value),
     subpagePurpose: sanitizeText(elements.subpagePurpose.value),
@@ -964,21 +1013,70 @@ function buildSubpagePromptParts(context = getGenerationContext()) {
   const keys = subpageLengths[context.subpageLength] || subpageLengths.three;
   const prompts = { spec: '', top: '', middle: '', bottom: '' };
   if (!context.designLock) return prompts;
+  prompts.spec = buildSubpageBlueprintPrompt(context);
+  if (!context.pageBlueprint) return prompts;
   keys.forEach((segmentKey, index) => {
     prompts[['top', 'middle', 'bottom'][index]] = buildSubpageImagePrompt(context, segmentKey, index, keys.length);
   });
   return prompts;
 }
 
+function buildSubpageBlueprintPrompt(context) {
+  const pageType = subpageTypes[context.subpageType] || subpageTypes.other;
+  const pageName = context.subpageName || pageType.label;
+  const segmentKeys = subpageLengths[context.subpageLength] || subpageLengths.three;
+  const segmentLabels = { full: 'ページ全体', upper: 'ページ上部', middle: 'ページ中部', lower: 'ページ下部' };
+
+  return [
+    `# 下層ページ構成表作成プロンプト — ${pageName}`,
+    '',
+    `あなたはシニアWebデザイナー兼情報設計者です。${context.industryName}の${context.site.label}にある「${pageName}」下層ページについて、画像生成前にページ全体のコンテンツと分割位置を確定してください。`,
+    'この段階では画像を生成しないでください。後続の画像生成が独自にカテゴリーやセクションを追加しないよう、曖昧さのない構成表を1案だけ作成してください。',
+    '',
+    '## 固定する共通デザイン仕様書',
+    '<design_lock>',
+    context.designLock,
+    '</design_lock>',
+    '',
+    '## ページの条件',
+    `- ページ種別：${pageType.label}`,
+    `- ページ名：${pageName}`,
+    `- ページの目的：${context.subpagePurpose || `${pageType.label}として必要な情報を理解・判断でき、サイト全体の主要行動へ自然に進めるようにする。`}`,
+    `- 想定ユーザー：${context.audience}`,
+    `- 必ず含める内容：${context.subpageContent || 'ページ種別と目的から必要な内容を判断する。根拠のない情報は追加しない。'}`,
+    `- 主要CTA：${context.subpageCta || context.goal.label}`,
+    `- 生成画像：${segmentKeys.length}枚（${segmentKeys.map((key) => segmentLabels[key]).join('・')}）`,
+    '',
+    '## 構成候補',
+    ...pageType.sections.map((section, index) => `${index + 1}. ${section}`),
+    '上記は候補です。ページの目的に不要な項目は削除し、必須内容に必要な項目は具体化してください。',
+    '',
+    '## 分割設計の絶対条件',
+    '- すべてのセクションにS01から始まる一意のIDを付ける。',
+    `- 各セクションを${segmentKeys.map((key) => `「${segmentLabels[key]}」`).join('・')}のいずれか1つだけに割り当てる。`,
+    '- 1つのセクションを2枚以上の画像へ分割しない。見出しだけを前の画像、本文やカードを次の画像へ送る構成は禁止する。',
+    '- 各セクションは、見出し・導入・主要コンテンツ・必要な補足を同じ画像内で開始し、同じ画像内で完結させる。',
+    '- カテゴリー一覧・タブ・目次を設ける場合は、表示するカテゴリー名を先に確定し、各カテゴリーに対応する内容のセクションIDと担当画像を明記する。',
+    '- メニューや商品を扱う場合は、カテゴリー名と掲載項目名を「共通コンテンツ台帳」で確定する。同じ名称・順序をすべての画像で維持する。',
+    '- 1枚に収まらない場合はセクション内部を分割せず、セクション単位で次の画像へ移すか、優先度の低いセクション全体を削除する。',
+    '- ページ上部にはヘッダー、ページ下部には最終CTAとフッターを割り当てる。ページ全体1枚の場合はすべてを含める。',
+    '',
+    '## 出力形式',
+    '見出しを「# 下層ページ構成表 — Page Blueprint v1」とし、次の順序で日本語のみを使って出力してください。',
+    '1. ページ全体の役割：目的、閲覧順、主要CTA',
+    '2. 共通コンテンツ台帳：カテゴリー名、掲載項目名、表示順、対応するセクションID。該当しない場合は「なし」',
+    '3. セクション割当表：各行に「ID／担当画像／セクション名／役割／含める具体的内容／完結条件」',
+    '4. 画像ごとの開始・終了：最初のセクションID、最後のセクションID、前画像から引き継ぐ内容、次画像へ引き継ぐ内容',
+    '5. 整合性確認：未割当セクション、重複、画像をまたぐ未完了セクションがすべて「なし」であること',
+    '',
+    '「引き継ぐ内容」は、確定済みの名称・順序・デザイン規則だけに限定してください。未完了のセクション本文やカードを次画像へ引き継がないでください。',
+    '説明や複数案は不要です。構成表本文だけを出力してください。',
+  ].join('\n');
+}
+
 function buildSubpageImagePrompt(context, segmentKey, segmentIndex, segmentCount) {
   const pageType = subpageTypes[context.subpageType] || subpageTypes.other;
   const pageName = context.subpageName || pageType.label;
-  const ranges = {
-    full: pageType.sections,
-    upper: pageType.sections.slice(0, 2),
-    middle: pageType.sections.slice(2, 4),
-    lower: pageType.sections.slice(4),
-  };
   const segmentLabels = { full: 'ページ全体', upper: 'ページ上部', middle: 'ページ中部', lower: 'ページ下部' };
   const segmentLabel = segmentLabels[segmentKey];
   const referenceRules = segmentIndex === 0
@@ -1004,24 +1102,29 @@ function buildSubpageImagePrompt(context, segmentKey, segmentIndex, segmentCount
     ];
 
   return [
-    `# Subpage Website UI Mockup Image Prompt — ${pageName} / ${segmentLabel}`,
+    `# 下層ページUIモックアップ画像生成プロンプト — ${pageName}／${segmentLabel}`,
     '',
-    `Create a high-fidelity, production-ready website UI mockup for the ${segmentLabel} of the “${pageName}” subpage on the existing ${context.industryName} ${context.site.label}.`,
+    `${context.industryName}の${context.site.label}にある「${pageName}」下層ページの${segmentLabel}について、高精細で実装可能なWebサイトUIモックアップ画像を生成してください。`,
     '新しいサイト案ではなく、すでに制作したトップページと同一サイトの下層ページとして描画してください。',
     '',
-    '## Non-negotiable Continuity',
+    '## 必ず維持する連続性',
     ...referenceRules.map((rule) => `- ${rule}`),
     '- 変更してよいのは、下層ページ固有の情報構成、見出し、本文、必要なコンテンツ配置だけとする。',
     '- ロゴ、ヘッダー、グローバルナビゲーション、フッター、CTAの優先順位、配色、書体、文字階層、コンテンツ幅、グリッド、余白スケール、ボタン、罫線、角丸、影、アイコン、写真の色調は変更しない。',
     '- 現在ページに対応するグローバルナビゲーションの選択状態と、Design Lockに適合するパンくずリストを設ける。',
-    '- 下記のEmbedded Design Lockを、会話履歴・参照画像・このプロンプト内の他の記述より優先する。',
+    '- 下記の「埋め込み共通デザイン仕様書」を、会話履歴・参照画像・このプロンプト内の他の記述より優先する。',
     '',
-    '## Embedded Design Lock — Verbatim',
+    '## 埋め込み共通デザイン仕様書（全文）',
     '<design_lock>',
     context.designLock,
     '</design_lock>',
     '',
-    '## Subpage Definition',
+    '## 埋め込み下層ページ構成表（全文）',
+    '<page_blueprint>',
+    context.pageBlueprint,
+    '</page_blueprint>',
+    '',
+    '## 下層ページの条件',
     `- ページ種別：${pageType.label}`,
     `- ページ名：${pageName}`,
     `- ページの目的：${context.subpagePurpose || `${pageType.label}として必要な情報を理解・判断でき、サイト全体の主要行動へ自然に進めるようにする。`}`,
@@ -1029,34 +1132,41 @@ function buildSubpageImagePrompt(context, segmentKey, segmentIndex, segmentCount
     `- 必ず含める内容：${context.subpageContent || 'ページ種別と目的から必要な内容を判断する。根拠のない情報は追加しない。'}`,
     `- 主要CTA：${context.subpageCta || context.goal.label}`,
     '',
-    '## Canvas / Framing',
+    '## 描画範囲',
     `- 全${segmentCount}枚のうち${segmentIndex + 1}枚目：${segmentLabel}`,
     ...framing.map((rule) => `- ${rule}`),
     '- デバイス枠、プレゼンテーションボード、注釈、カラーパレット見本、周囲の装飾を付けない。',
     '- 画像全体をWebサイトのUIだけで構成する。',
     '',
-    '## Information Architecture for This Image',
-    ...(ranges[segmentKey] || pageType.sections).map((section, index) => `${index + 1}. ${section}`),
-    '- トップページの構成をそのまま複製せず、この下層ページの目的に適した情報階層にする。',
-    '- ただし視覚言語やUIコンポーネントを新しく発明せず、Design Lockに定義済みのパターンを再利用する。',
+    '## この画像で描画するセクション',
+    `- 下層ページ構成表の「セクション割当表」で担当画像が「${segmentLabel}」になっているセクションIDだけを、記載順に描画する。`,
+    '- 他の画像へ割り当てられたセクションを先取り、反復、要約して描画しない。',
+    '- 各セクションは、見出し・導入・主要コンテンツ・必要な補足までをこの1枚の中で完結させる。画像下端でセクションを切断しない。',
+    '- セクション全体が収まらない場合は、文字や余白を縮めず、そのセクション全体を次の担当画像へ移す。ただし構成表と異なる移動が必要なら画像を生成せず、構成表の修正を依頼する。',
+    '- カテゴリー、タブ、目次、メニュー名、商品名は「共通コンテンツ台帳」に記載された名称・順序・対応セクションIDを厳守する。',
+    '- カテゴリー一覧だけを描画して、対応内容を後続画像へ曖昧に委ねる構成は禁止する。カテゴリーを表示する場合は、その対応関係が構成表どおり判別できる状態にする。',
+    '- トップページの構成をそのまま複製せず、この下層ページの目的に適した情報階層にする。ただし視覚言語やUI部品を新しく発明しない。',
     '',
-    '## Rendering Priorities',
-    '1. Embedded Design Lockに記載された具体値と使用規則をそのまま維持する',
-    '2. トップページ画像と先行画像のブランド表現・UI部品を維持する',
-    '3. 読みやすい文字サイズと、Design Lockどおりの余白リズムを保つ',
-    '4. この下層ページ固有の目的と情報階層を表現する',
-    '5. 補助的な文章や要素を収める',
+    '## 描画の優先順位',
+    '1. 埋め込み共通デザイン仕様書に記載された具体値と使用規則をそのまま維持する',
+    '2. 下層ページ構成表のセクションID、担当画像、共通コンテンツ台帳を厳守する',
+    '3. トップページ画像と先行画像のブランド表現・UI部品を維持する',
+    '4. 読みやすい文字サイズと、Design Lockどおりの余白リズムを保つ',
+    '5. この下層ページ固有の目的と情報階層を表現する',
     '- 収まらない場合は余白や文字を縮小せず、優先度の低い文章・項目を省略する。',
     '- 日本語本文は1ブロック2〜3行を目安にし、意味不明な文字列やLorem ipsumを使わない。',
     '- 根拠のない実績値、受賞歴、顧客ロゴ、評価、人物名を追加しない。',
     '- Design Lockにない新しい色相、グラデーション、影、角丸、装飾スタイル、UI部品を追加しない。',
     '',
-    '## Preflight Check — Must Pass Before Rendering',
+    '## 生成前の必須確認',
     '- Design LockからPrimary、Accent、Background、Surface、Text、Muted text、BorderのHEX値を抽出し、指定用途と一致しているか内部確認する。',
     '- ヘッダー、フッター、ロゴ、ナビゲーション、CTA、ボタン、文字階層、コンテンツ幅、グリッド、余白、角丸、影、写真の色調がトップページと一致しているか確認する。',
+    `- 構成表から「${segmentLabel}」担当のセクションIDを列挙し、それ以外のセクションが含まれていないことを確認する。`,
+    '- 各セクションがこの画像内で完結し、画像下端に見出しだけ、途中のカード、切れた本文が残っていないことを確認する。',
+    '- 共通コンテンツ台帳にあるカテゴリー名・項目名・順序と、今回描画する内容が一致していることを確認する。',
     '- 1つでも不一致があれば、新しい解釈を採用せずDesign Lockと参照画像の値へ戻してから生成する。',
     '',
-    '## Output',
+    '## 出力',
     `Design Lockと参照画像を継承した「${pageName}」下層ページの${segmentLabel}モックアップ画像を1枚、直接生成してください。条件が揃っている場合、説明やデザイン解説は不要です。`,
   ].join('\n');
 }
@@ -1073,7 +1183,7 @@ function buildGuidedPromptSet(context) {
   const availableParts = context.designLock ? parts : parts.slice(0, 1);
 
   return [
-    '# Website UI Mockup Guided Prompt Set',
+    '# WebサイトUIモックアップ分割生成プロンプトセット',
     '',
     '以下の4本を、同じChatGPTチャットでSTEP 1から順番に1本ずつ使用してください。',
     '最初に共通デザイン仕様書を確定し、その仕様書と先に生成した画像を基準に3分割の画像を生成してください。',
@@ -1109,12 +1219,12 @@ function buildCommonDesignSpecificationPrompt(context) {
   const allSections = pageStructures[context.siteKey] || pageStructures.other;
 
   return [
-    '# Common Design Specification Creation Prompt',
+    '# 共通デザイン仕様書作成プロンプト',
     '',
     `あなたはシニアWebデザイナーです。${context.industryName}の${context.site.label}について、これから同じチャットで生成するページ上部・中部・下部の3枚に共通して適用するデザイン仕様書を作成してください。`,
     'この段階では画像を生成しないでください。曖昧な選択肢を残さず、以降の画像生成で変更しない具体的なルールとして確定してください。',
     '',
-    '## Project Context',
+    '## プロジェクトの条件',
     `- 主な目的：${context.goal.label}。${context.goal.text}`,
     `- 想定ユーザー：${context.audience}`,
     `- 業種の前提：${context.industry.traits}`,
@@ -1128,30 +1238,30 @@ function buildCommonDesignSpecificationPrompt(context) {
     ...(context.avoid ? [`- ユーザーが避けたい表現：${context.avoid}`] : []),
     ...(context.request ? [`- 追加要望：${context.request}`] : []),
     '',
-    '## Whole-page Architecture',
+    '## ページ全体の構成',
     ...allSections.map((section, index) => `${index + 1}. ${section}`),
     '',
-    '## Required Specification',
+    '## 必ず確定する仕様',
     '次の項目を、実装判断に使える具体性で1案に確定してください。複数案は提示しないでください。',
-    '1. Design principles：このサイト固有の視覚原則を3〜5項目',
-    '2. Color tokens：Primary、Accent、Background、Surface、Text、Muted text、BorderのHEX値と使用比率・用途',
-    '3. Typography：和文・欧文の書体カテゴリ、見出し・本文・補足のサイズ階層、ウェイト、行間',
-    '4. Layout system：デスクトップ幅、コンテンツ最大幅、カラム数、ガター、左右余白、基準グリッド',
-    '5. Spacing system：セクション間、要素間、文字まわりに使う具体的な余白スケール',
-    '6. Components：ヘッダー、ナビゲーション、CTA、ボタン、カード、罫線、角丸、影の統一ルール',
-    '7. Photography：被写体、構図、光、色温度、トリミング、避ける写真表現',
-    '8. Content density：1セクションの情報量、本文行数、カード数、ナビゲーション数の上限',
-    '9. Continuity rules：上部・中部・下部で絶対に変更しない要素と、セクションごとに変化させてよい要素',
-    '10. Prohibited expressions：テンプレート感や業種との不一致を防ぐ禁止事項',
+    '1. デザイン原則：このサイト固有の視覚原則を3〜5項目',
+    '2. カラートークン：Primary、Accent、Background、Surface、Text、Muted text、BorderのHEX値と使用比率・用途',
+    '3. タイポグラフィ：和文・欧文の書体カテゴリ、見出し・本文・補足のサイズ階層、ウェイト、行間',
+    '4. レイアウトシステム：デスクトップ幅、コンテンツ最大幅、カラム数、ガター、左右余白、基準グリッド',
+    '5. 余白システム：セクション間、要素間、文字まわりに使う具体的な余白スケール',
+    '6. UI部品：ヘッダー、ナビゲーション、CTA、ボタン、カード、罫線、角丸、影の統一ルール',
+    '7. 写真方針：被写体、構図、光、色温度、トリミング、避ける写真表現',
+    '8. 情報密度：1セクションの情報量、本文行数、カード数、ナビゲーション数の上限',
+    '9. 連続性の規則：上部・中部・下部で絶対に変更しない要素と、セクションごとに変化させてよい要素',
+    '10. 禁止表現：テンプレート感や業種との不一致を防ぐ禁止事項',
     '',
-    '## Constraints',
+    '## 制約',
     '- 「暖色系」「モダン」「広め」などの抽象語だけで終わらせず、色・寸法・比率・用途へ具体化する。',
     '- 根拠のない実績値、受賞歴、顧客名、人物名を仕様へ追加しない。',
     `- ${context.industry.avoid}`,
     '- 仕様書内で矛盾が生じる場合は、サイトの目的、業種としての適切性、可読性、ユーザー指定の順に調整する。',
     '',
-    '## Output',
-    '見出しを「# Common Design Specification — Design Lock v1」とし、仕様書本文だけを2,000文字以内で出力してください。画像やモックアップは生成しないでください。',
+    '## 出力',
+    '見出しを「# 共通デザイン仕様書 — Design Lock v1」とし、仕様書本文だけを2,000文字以内で出力してください。画像やモックアップは生成しないでください。',
     '説明的な理由や複数案を省き、各トークンの具体値と使用規則を短く再利用しやすい形式でまとめてください。',
     '出力した仕様書を、このチャットで続けて行う3枚の画像生成における固定ルールとして保持してください。',
   ].join('\n');
@@ -1163,7 +1273,7 @@ function buildGuidedPartImagePrompt(context, scopeKey) {
   const scopedSections = scope.indices.map((index) => allSections[index]);
   const priorImageRules = {
     top: [
-      'このチャットで直前に確定した「Common Design Specification — Design Lock v1」を、視覚表現の最優先ルールとして使用する。',
+      'このチャットで直前に確定した「Design Lock v1」を、視覚表現の最優先ルールとして使用する。',
       '共通仕様書がまだ作成されていない場合は画像を生成せず、先にSTEP 1を実行するよう伝える。',
     ],
     middle: [
@@ -1179,38 +1289,38 @@ function buildGuidedPartImagePrompt(context, scopeKey) {
   };
 
   return [
-    `# Website UI Mockup Image Prompt — ${scope.label}`,
+    `# WebサイトUIモックアップ画像生成プロンプト — ${scope.label}`,
     '',
-    `Create a high-fidelity, production-ready website UI mockup for the ${scope.label} of a ${context.industryName} ${context.site.label}.`,
+    `${context.industryName}の${context.site.label}について、${scope.label}の高精細で実装可能なWebサイトUIモックアップ画像を生成してください。`,
     'コンセプトアートや広告ではなく、実際に公開されている同一Webサイトの連続した画面として描画してください。',
     '',
-    '## Authoritative Sources',
+    '## 最優先の参照情報',
     ...priorImageRules[scopeKey].map((rule) => `- ${rule}`),
     '- このプロンプトは表示範囲とコンテンツの役割だけを指定する。色やUIルールを新しく選び直さない。',
-    '- 下記のEmbedded Design Lockを会話履歴への参照より優先し、記載された具体値をこの画像でも直接適用する。',
+    '- 下記の埋め込み共通デザイン仕様書を会話履歴への参照より優先し、記載された具体値をこの画像でも直接適用する。',
     '',
-    '## Embedded Design Lock — Verbatim',
+    '## 埋め込み共通デザイン仕様書（全文）',
     '<design_lock>',
     context.designLock,
     '</design_lock>',
     '',
-    '## Purpose and Audience',
+    '## 制作目的と想定ユーザー',
     `- 主な目的：${context.goal.label}。${context.goal.text}`,
     `- 想定ユーザー：${context.audience}`,
     '',
-    '## Canvas / Framing',
+    '## 描画範囲',
     `- 表示範囲：${scope.label}`,
     ...scope.framing.map((rule) => `- ${rule}`),
     '- PC、スマートフォン、ブラウザなどのデバイス枠には入れない。',
     '- プレゼンテーションボード、注釈、カラーパレット見本、周囲の装飾を付けない。',
     '- 画像全体をWebサイトのUIだけで構成する。',
     '',
-    '## Page Architecture',
+    '## ページ構成',
     ...scopedSections.map((section, index) => `${index + 1}. ${section}`),
     '- 各セクションに異なる役割と構図を持たせ、同じカードレイアウトを反復しない。',
     '',
-    '## Rendering Priorities',
-    '1. Embedded Design Lockの具体的な色・寸法・UIルールをそのまま維持する',
+    '## 描画の優先順位',
+    '1. 埋め込み共通デザイン仕様書の具体的な色・寸法・UIルールをそのまま維持する',
     '2. 先行画像の構図、写真表現、視覚的な雰囲気を維持する',
     '3. 余白のリズムと読みやすい文字サイズを保つ',
     '4. 指定範囲の情報階層とセクション構成を表現する',
@@ -1219,14 +1329,14 @@ function buildGuidedPartImagePrompt(context, scopeKey) {
     '- 日本語の本文は1ブロック2〜3行を目安とし、意味不明な文字列やLorem ipsumを使わない。',
     '- 根拠のない実績値、受賞歴、顧客ロゴ、評価、人物名を追加しない。',
     '- 新しいデザイン案として作り直さず、今回指定した表示範囲だけを生成する。',
-    '- Embedded Design Lockにない新しい色相、グラデーション、影、角丸、装飾スタイルを追加しない。',
+    '- 共通デザイン仕様書にない新しい色相、グラデーション、影、角丸、装飾スタイルを追加しない。',
     '',
-    '## Preflight Check',
+    '## 生成前の必須確認',
     '- 生成前に、Color tokensのPrimary、Accent、Background、Surface、Text、Borderを抽出し、それぞれ指定用途に使っているか内部確認する。',
     '- 特にAccentが下部で消失したり、Primaryが別の青・緑へ変化したりしていないことを確認する。',
     '- 共通仕様書と異なる色を検出した場合は、画像を出力する前に仕様書の値へ戻す。',
     '',
-    '## Output',
+    '## 出力',
     `共通仕様書と参照画像を継承した「${scope.label}」のモックアップ画像を1枚、直接生成してください。条件が揃っている場合、説明やデザイン解説は不要です。`,
   ].join('\n');
 }
@@ -1241,9 +1351,9 @@ function buildSingleImageMockupPrompt(context, scopeKey) {
     : '業種・目的・想定ユーザーに適した視覚的な個性を判断する。';
 
   return [
-    '# Website UI Mockup Image Prompt',
+    '# WebサイトUIモックアップ画像生成プロンプト',
     '',
-    `Create a high-fidelity, production-ready website UI mockup for a ${context.industryName} ${context.site.label}.`,
+    `${context.industryName}の${context.site.label}について、高精細で実装可能なWebサイトUIモックアップ画像を生成してください。`,
     'コンセプトアートやWebサイトを紹介する広告ではなく、実際に公開されている完成済みWebサイトの画面として描画してください。',
     '',
     '## 制作目的と想定ユーザー',
@@ -1251,7 +1361,7 @@ function buildSingleImageMockupPrompt(context, scopeKey) {
     `- 想定ユーザー：${context.audience}`,
     `- 業種の前提：${context.industry.traits}`,
     '',
-    '## Canvas / Framing',
+    '## 描画範囲',
     `- 表示範囲：${scope.label}`,
     ...scope.framing.map((rule) => `- ${rule}`),
     '- 描画対象となるWebサイト画面の左右端と、選択した表示範囲の構成が分かるようにする。',
@@ -1260,15 +1370,15 @@ function buildSingleImageMockupPrompt(context, scopeKey) {
     '- 画像全体をWebサイトのUIだけで構成する。',
     ...(continuityRules.length ? [
       '',
-      '## Reference Continuity',
+      '## 参照画像との連続性',
       ...continuityRules.map((rule) => `- ${rule}`),
     ] : []),
     '',
-    '## Page Architecture',
+    '## ページ構成',
     ...scopedSections.map((section, index) => `${index + 1}. ${section}`),
     '各セクションは異なる役割と構図を持たせ、同じカードレイアウトを反復しない。',
     '',
-    '## Visual Direction',
+    '## ビジュアル方針',
     `- コンセプト：${concept}`,
     ...(context.impressionDirections.length
       ? context.impressionDirections.map((direction) => `- ${direction}`)
@@ -1279,7 +1389,7 @@ function buildSingleImageMockupPrompt(context, scopeKey) {
     `- 余白：${context.spacing}`,
     `- 写真・ビジュアル：${context.visual}`,
     '',
-    '## UI Rendering Requirements',
+    '## UI描画要件',
     '- 明確なグリッド、情報階層、タイポグラフィ、余白のリズムを持つ、実装可能なレイアウトにする。',
     '- 日本語の見出しとUI文言を短く、読みやすく配置する。本文は1ブロック2〜3行を目安とし、長文を詰め込まない。',
     '- ナビゲーション項目は5個以内にし、本文を収めるために文字サイズや行間を小さくしない。',
@@ -1288,7 +1398,7 @@ function buildSingleImageMockupPrompt(context, scopeKey) {
     '- 根拠のない実績値、受賞歴、顧客ロゴ、評価、人物名を追加しない。',
     '- CTAは主な目的に対応させ、ページ内で一貫した優先順位にする。',
     '',
-    '## Hard Priorities',
+    '## 優先順位',
     '指示が競合する場合は、必ず次の順序で優先してください。',
     '1. 余白のリズムと読みやすい文字サイズを保つ',
     '2. 明確な情報階層と、セクションごとに異なる構図を保つ',
@@ -1296,13 +1406,13 @@ function buildSingleImageMockupPrompt(context, scopeKey) {
     '4. 指定されたセクション数を満たす',
     'キャンバスに収まらない場合は、余白や文字を縮小せず、優先度の低い文章・カード・セクションを省略してください。',
     '',
-    '## Constraints',
+    '## 制約',
     ...antiTemplateRules.map((rule) => `- ${rule}`),
     `- ${context.industry.avoid}`,
     ...(context.avoid ? [`- ユーザーが避けたい表現：${context.avoid}`] : []),
     ...(context.request ? [`- 追加要望：${context.request}`] : []),
     '',
-    '## Output',
+    '## 出力',
     `「${scope.label}」の範囲だけを対象として、上記を満たすWebサイトのモックアップ画像を1枚、直接生成してください。生成前の説明、デザイン解説、箇条書きの回答は不要です。`,
   ].join('\n');
 }
@@ -1334,7 +1444,7 @@ function buildPrototypePrompt() {
     : '業種・目的・想定ユーザーに適した視覚的な個性を判断する。';
 
   return [
-    '# Frontend Prototype Implementation Brief',
+    '# フロントエンド・プロトタイプ実装指示書',
     '',
     `あなたはシニアWebデザイナー兼フロントエンドエンジニアです。${context.industryName}の${context.site.label}について、ブラウザで確認できる高品質なシングルページのHTML/CSSプロトタイプを制作してください。`,
     '',
@@ -1443,10 +1553,23 @@ function handleDesignLockInput() {
   const targets = isSubpageMode() ? elements.partOutputs : elements.partOutputs.slice(1);
   const hadGeneratedParts = targets.some((output) => output.value);
   targets.forEach((output) => { output.value = ''; });
+  if (isSubpageMode()) elements.pageBlueprintInput.value = '';
   elements.applyDesignLockButton.disabled = !sanitizeText(elements.designLockInput.value);
+  elements.applyPageBlueprintButton.disabled = true;
   if (hadGeneratedParts) {
     elements.status.className = 'form-status';
     elements.status.textContent = '共通仕様書が変更されました。もう一度、生成プロンプトへ反映してください。';
+  }
+  updateOutputState();
+}
+
+function handlePageBlueprintInput() {
+  const hadGeneratedImages = elements.partOutputs.slice(1).some((output) => output.value);
+  elements.partOutputs.slice(1).forEach((output) => { output.value = ''; });
+  elements.applyPageBlueprintButton.disabled = !sanitizeText(elements.designLockInput.value) || !sanitizeText(elements.pageBlueprintInput.value);
+  if (hadGeneratedImages) {
+    elements.status.className = 'form-status';
+    elements.status.textContent = '下層ページ構成表が変更されました。もう一度、画像生成プロンプトへ反映してください。';
   }
   updateOutputState();
 }
@@ -1470,8 +1593,20 @@ function applyDesignLock() {
   });
   elements.status.className = 'form-status success';
   elements.status.textContent = isSubpageMode()
-    ? `共通仕様書を下層ページ用の${(subpageLengths[elements.subpageLength.value] || subpageLengths.three).length}つのプロンプトへ直接埋め込みました。`
+    ? (sanitizeText(elements.pageBlueprintInput.value)
+      ? '共通仕様書と下層ページ構成表を画像生成プロンプトへ反映しました。'
+      : '共通仕様書を反映した下層ページ構成表作成用プロンプトを生成しました。ChatGPTの返答を構成表欄へ貼り付けてください。')
     : '共通仕様書を上部・中部・下部のプロンプトへ直接埋め込みました。';
+  updateOutputState();
+}
+
+function applyPageBlueprint() {
+  if (!sanitizeText(elements.designLockInput.value) || !sanitizeText(elements.pageBlueprintInput.value)) return;
+  const prompts = buildSubpagePromptParts();
+  const keys = ['spec', 'top', 'middle', 'bottom'];
+  elements.partOutputs.forEach((output, index) => { output.value = prompts[keys[index]]; });
+  elements.status.className = 'form-status success';
+  elements.status.textContent = `共通仕様書と構成表を全文埋め込んだ画像生成プロンプトを${(subpageLengths[elements.subpageLength.value] || subpageLengths.three).length}つ作成しました。`;
   updateOutputState();
 }
 
@@ -1506,6 +1641,7 @@ function updateOutputState() {
     elements.partCharacterCounts[index].textContent = `${output.value.length.toLocaleString('ja-JP')}文字`;
   });
   elements.applyDesignLockButton.disabled = !sanitizeText(elements.designLockInput.value);
+  elements.applyPageBlueprintButton.disabled = !sanitizeText(elements.designLockInput.value) || !sanitizeText(elements.pageBlueprintInput.value);
 }
 
 function clearValidation() {
@@ -1525,7 +1661,9 @@ function handleReset() {
     elements.output.value = '';
     elements.partOutputs.forEach((output) => { output.value = ''; });
     elements.designLockInput.value = '';
+    elements.pageBlueprintInput.value = '';
     elements.applyDesignLockButton.disabled = true;
+    elements.applyPageBlueprintButton.disabled = true;
     elements.copyLabel.textContent = 'コピー';
     elements.partCopyButtons.forEach((button) => {
       button.querySelector('.part-copy-label').textContent = 'コピー';
