@@ -154,6 +154,21 @@ const productionModes = {
   subpage: '下層ページ',
 };
 
+const designViewportRules = [
+  'PC版はビューポート全幅1600pxを基準に設計する。ページ背景や全幅セクションは左右端まで1600pxを使用する。',
+  'モバイル版はビューポート全幅400pxを基準に設計する。',
+  'PC版のコンテンツ最大幅は1200〜1360pxの範囲で、情報量とレイアウトに適した具体値を1つ決める。左右の外側余白を過度に広くして、内容が中央の狭い範囲へ縮こまらないようにする。',
+  'モバイル版の左右余白は20〜24pxの範囲で具体値を決め、コンテンツ幅をビューポート幅から左右余白を引いた値とする。',
+  'PC版とモバイル版で情報階層とデザイントークンを共通化し、カラム数、配置、文字サイズ、余白だけを各幅へ最適化する。',
+];
+
+const desktopMockupCanvasRules = [
+  '今回生成する画像はPC版だけを対象とし、モバイル版や複数デバイスの画面を同じ画像内へ並べない。',
+  'Webサイト画面のビューポート全幅を1600pxとして設計し、画像の左右端をWebサイトの左右端に一致させる。',
+  '画像生成サービスの出力解像度が1600px幅でない場合も、1600px幅のWebサイトを同比率で縮尺した完成画面として描画する。狭いビューポート用のレイアウトへ変更しない。',
+  'ページ背景と全幅セクションは1600px全体を使い、本文やカードなどの主要コンテンツはDesign Lockで確定した1200〜1360pxのコンテンツ最大幅へ揃える。',
+];
+
 const mockupScopes = {
   set: {
     label: '上部・中部・下部の3分割セット',
@@ -920,6 +935,7 @@ function buildPrompt() {
     `- アニメーション：${optionDetails.animation[elements.animation.value]}`,
     '',
     '## レイアウト・UI',
+    ...designViewportRules.map((rule) => `- ${rule}`),
     ...qualityRules.map((rule) => `- ${rule}`),
     '',
     '次のようなAI特有のテンプレート感を避けてください。',
@@ -1176,6 +1192,7 @@ function buildSubpageImagePrompt(context, segmentKey, segmentIndex, segmentCount
     '## 描画範囲',
     `- 全${segmentCount}枚のうち${segmentIndex + 1}枚目：${segmentLabel}`,
     ...framing.map((rule) => `- ${rule}`),
+    ...desktopMockupCanvasRules.map((rule) => `- ${rule}`),
     '- デバイス枠、プレゼンテーションボード、注釈、カラーパレット見本、周囲の装飾を付けない。',
     '- 画像全体をWebサイトのUIだけで構成する。',
     '',
@@ -1286,6 +1303,7 @@ function buildCommonDesignSpecificationPrompt(context) {
     `- スタイル：${context.style}`,
     `- 余白：${context.spacing}`,
     `- 写真・ビジュアル：${context.visual}`,
+    ...designViewportRules.map((rule) => `- ${rule}`),
     ...(context.avoid ? [`- ユーザーが避けたい表現：${context.avoid}`] : []),
     ...(context.request ? [`- 追加要望：${context.request}`] : []),
     '',
@@ -1297,7 +1315,7 @@ function buildCommonDesignSpecificationPrompt(context) {
     '1. デザイン原則：このサイト固有の視覚原則を3〜5項目',
     '2. カラートークン：Primary、Accent、Background、Surface、Text、Muted text、BorderのHEX値と使用比率・用途',
     '3. タイポグラフィ：和文・欧文の書体カテゴリ、見出し・本文・補足のサイズ階層、ウェイト、行間',
-    '4. レイアウトシステム：デスクトップ幅、コンテンツ最大幅、カラム数、ガター、左右余白、基準グリッド',
+    '4. レイアウトシステム：PCのビューポート全幅を1600px、モバイルのビューポート全幅を400pxに固定する。PCのコンテンツ最大幅は1200〜1360pxから具体値を1つ選び、モバイルの左右余白は20〜24pxから具体値を1つ選ぶ。各幅のカラム数、ガター、基準グリッドも確定する',
     '5. 余白システム：セクション間、要素間、文字まわりに使う具体的な余白スケール',
     '6. UI部品：ヘッダー、ナビゲーション、CTA、ボタン、カード、罫線、角丸、影の統一ルール',
     '7. 写真方針：被写体、構図、光、色温度、トリミング、避ける写真表現',
@@ -1384,6 +1402,7 @@ function buildGuidedPartImagePrompt(context, scopeKey) {
     '## 描画範囲',
     `- 表示範囲：${scope.label}`,
     ...scope.framing.map((rule) => `- ${rule}`),
+    ...desktopMockupCanvasRules.map((rule) => `- ${rule}`),
     '- PC、スマートフォン、ブラウザなどのデバイス枠には入れない。',
     '- プレゼンテーションボード、注釈、カラーパレット見本、周囲の装飾を付けない。',
     '- 画像全体をWebサイトのUIだけで構成する。',
@@ -1445,6 +1464,7 @@ function buildSingleImageMockupPrompt(context, scopeKey) {
     '## 描画範囲',
     `- 表示範囲：${scope.label}`,
     ...scope.framing.map((rule) => `- ${rule}`),
+    ...desktopMockupCanvasRules.map((rule) => `- ${rule}`),
     '- 描画対象となるWebサイト画面の左右端と、選択した表示範囲の構成が分かるようにする。',
     '- PC、スマートフォン、ブラウザなどのデバイス枠には入れない。',
     '- プレゼンテーションボード、注釈、カラーパレット見本、周囲の装飾を付けない。',
@@ -1555,6 +1575,8 @@ function buildPrototypePrompt() {
     '- HTML、CSS、Vanilla JavaScriptを使用し、外部フレームワークなしで動作させる。',
     '- index.html、assets/css/style.css、assets/js/app.jsの構成で、すぐにローカル表示できる完成コードを作る。',
     '- セマンティックHTMLを使用し、見出し階層、ランドマーク、フォームラベル、代替テキストを適切に設定する。',
+    '- PC版は1600px幅、モバイル版は400px幅を基準ビューポートとして実装し、両方の幅で完成状態を確認する。',
+    '- PC版のコンテンツ最大幅は1200〜1360pxから適切な値を設定し、モバイル版の左右余白は20〜24pxにする。ページ背景と全幅セクションは各ビューポートの左右端まで使用する。',
     '- PC、タブレット、スマートフォンで情報階層を保つレスポンシブレイアウトにする。',
     '- キーボード操作、フォーカス表示、十分なコントラスト、タップ領域、動きを減らす設定に配慮する。',
     '- 実際のサイトとして自然な日本語の仮コンテンツを使う。ただし、実在しない実績値、受賞歴、顧客名、口コミを捏造しない。',
